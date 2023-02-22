@@ -125,12 +125,12 @@ TEST_POD_TEMPLATE='
 apiVersion: v1
 kind: Pod
 metadata:
-  name: test-${ns}
+  name: ${test_pod_name}
   namespace: ${ns}
 spec:
   restartPolicy: Never
   containers:
-  - name: test-${ns}
+  - name: ${test_pod_name}
     image: cloudnativeofalibabacloud/test-runner:v0.0.1
     resources:
           limits:
@@ -161,6 +161,8 @@ if [ ${ACTION} == "test" ]; then
   echo "************************************"
 
   ns=${env_uuid}
+  test_pod_name=test-${env_uuid}-${RANDOM}
+  export test_pod_name
 
   echo namespace: $ns
   all_pod_name=`kubectl get pods --no-headers -o custom-columns=":metadata.name" -n ${ns}`
@@ -193,23 +195,29 @@ if [ ${ACTION} == "test" ]; then
 
   sleep 5
 
-  pod_status=`kubectl get pod test-${ns} --template={{.status.phase}} -n ${ns}`
+  pod_status=`kubectl get pod ${test_pod_name} --template={{.status.phase}} -n ${ns}`
+  if [ -z "$pod_status" ]; then
+      pod_status="Pending"
+  fi
 
   while [ "${pod_status}" == "Pending" ] || [ "${pod_status}" == "Running" ]
   do
-      echo waiting for test-${ns} test done...
+      echo waiting for ${test_pod_name} test done...
       sleep 5
-      pod_status=`kubectl get pod test-${ns} --template={{.status.phase}} -n ${ns}`
-      test_done=`kubectl exec -i test-${ns} -n ${ns} -- ls /root | grep testdone`
+      pod_status=`kubectl get pod ${test_pod_name} --template={{.status.phase}} -n ${ns}`
+      if [ -z "$pod_status" ]; then
+          pod_status="Pending"
+      fi
+      test_done=`kubectl exec -i ${test_pod_name} -n ${ns} -- ls /root | grep testdone`
       if [ ! -z "$test_done" ]; then
         echo "Test status: test done"
         if [ ! -z "$is_mvn_cmd" ]; then
           if [ ! -d "./test_report" ]; then
             echo "Copy test reports"
-            kubectl cp --retries=10 test-${ns}:/root/testlog.txt testlog.txt -n ${ns}
+            kubectl cp --retries=10 ${test_pod_name}:/root/testlog.txt testlog.txt -n ${ns}
             mkdir -p test_report
             cd test_report
-            kubectl cp --retries=10 test-${ns}:/root/code/${TEST_CODE_PATH}/target/surefire-reports/. . -n ${ns}
+            kubectl cp --retries=10 ${test_pod_name}:/root/code/${TEST_CODE_PATH}/target/surefire-reports/. . -n ${ns}
             rm -rf *.txt
             ls
             cd -
@@ -218,8 +226,8 @@ if [ ${ACTION} == "test" ]; then
       fi
   done
 
-  exit_code=`kubectl get pod test-${ns} --output="jsonpath={.status.containerStatuses[].state.terminated.exitCode}" -n ${ns}`
-  kubectl delete pod test-${ns} -n ${ns}
+  exit_code=`kubectl get pod ${test_pod_name} --output="jsonpath={.status.containerStatuses[].state.terminated.exitCode}" -n ${ns}`
+  kubectl delete pod ${test_pod_name} -n ${ns}
   echo E2E Test exit code: ${exit_code}
   exit ${exit_code}
 fi
