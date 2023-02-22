@@ -8,7 +8,7 @@ KubeVela needs to be installed in Kubernetes before use.
 <!-- start usage -->
 ## Use helm chart to deploy your app in Kubernetes
 ```yaml
-  - uses: alibaba/cloud-native-test-ci-tool@v1
+  - uses: apache/rocketmq-test-tool@v1
     name: Deploy
     with:
       action: "deploy"
@@ -26,7 +26,7 @@ KubeVela needs to be installed in Kubernetes before use.
 ```
 ## Execute your E2E test
 ```yaml
-  - uses: alibaba/cloud-native-test-ci-tool@v1
+  - uses: apache/rocketmq-test-tool@v1
     name: e2e test
     with:
       action: "test"
@@ -46,7 +46,7 @@ KubeVela needs to be installed in Kubernetes before use.
 ```
 ## Clean your app in Kubernetes
 ```yaml
-  - uses: alibaba/cloud-native-test-ci-tool@v1
+  - uses: apache/rocketmq-test-tool@v1
     name: clean
     with:
       action: "clean"
