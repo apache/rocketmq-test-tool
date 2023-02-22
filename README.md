@@ -1,6 +1,6 @@
-# cloud-native-test-ci-tool
+# Apache RocketMQ Test Tool
 
-This action uses Helm and KubeVela to deploy applications and execute E2E tests in Kubernetes.
+This tool uses Helm and KubeVela to deploy applications and execute E2E tests in Kubernetes.
 KubeVela needs to be installed in Kubernetes before use.
 
 # Usage
