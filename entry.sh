@@ -169,6 +169,9 @@ if [ ${ACTION} == "test" ]; then
   ALL_IP=""
   for pod in $all_pod_name;
   do
+      if [ ! -z `echo "${pod}" | grep "test-${env_uuid}"` ]; then
+        continue
+      fi
       POD_HOST=$(kubectl get pod ${pod} --template={{.status.podIP}} -n ${ns})
       ALL_IP=${pod}:${POD_HOST},${ALL_IP}
   done
