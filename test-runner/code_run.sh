@@ -16,15 +16,17 @@
 # limitations under the License.
 #
 
-export M2_HOME=/opt/apache-maven-3.8.7
-export MAVEN_HOME=/opt/apache-maven-3.8.7
+export M2_HOME=/opt/apache-maven-3.8.8
+export MAVEN_HOME=/opt/apache-maven-3.8.8
 export PATH=${M2_HOME}/bin:${PATH}
 
-git clone $CODE -b $BRANCH code 
+git clone $CODE -b $BRANCH code
 
 cd code
 cd $CODE_PATH
-$CMD > /root/testlog.txt
+script_name=$(uuidgen).sh
+echo -e "$CMD" > $script_name
+sh $script_name > /root/testlog.txt 2>&1
 res=$?
 # wait for result collect
 touch /root/testdone
