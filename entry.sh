@@ -74,7 +74,7 @@ spec:
         url: ${CHART_GIT}
         values:
 ${YAML_VALUES}'
-
+export env_uuid
 echo -e "${VELA_APP_TEMPLATE}" > ./velaapp.yaml
 sed -i '1d' ./velaapp.yaml
 
