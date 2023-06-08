@@ -131,7 +131,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: ${test_pod_name}
-    image: cloudnativeofalibabacloud/test-runner:v0.0.1
+    image: cloudnativeofalibabacloud/test-runner:v0.0.3
     resources:
           limits:
             cpu: "8"
@@ -146,10 +146,11 @@ spec:
       value: ${TEST_CODE_BRANCH}
     - name: CODE_PATH
       value: ${TEST_CODE_PATH}
-    - name: CMD
-      value: ${TEST_CMD}
     - name: ALL_IP
       value: ${ALL_IP}
+    - name: CMD
+      value: |
+${TEST_CMD}
 '
 
 echo -e "${TEST_POD_TEMPLATE}" > ./testpod.yaml
@@ -182,12 +183,9 @@ if [ ${ACTION} == "test" ]; then
 
   export ALL_IP
   export ns
-  is_mvn_cmd=`echo $TEST_CMD_BASE | grep "mvn"`
-  if [ ! -z "$is_mvn_cmd" ]; then
-      TEST_CMD="$TEST_CMD_BASE -DALL_IP=${ALL_IP}"
-  else
-      TEST_CMD=$TEST_CMD_BASE
-  fi
+
+  TEST_CMD=`echo "${TEST_CMD_BASE}" | sed -s 's/^/        /g'`
+
   echo $TEST_CMD
   export TEST_CMD
 
@@ -214,7 +212,6 @@ if [ ${ACTION} == "test" ]; then
       test_done=`kubectl exec -i ${test_pod_name} -n ${ns} -- ls /root | grep testdone`
       if [ ! -z "$test_done" ]; then
         echo "Test status: test done"
-        if [ ! -z "$is_mvn_cmd" ]; then
           if [ ! -d "./test_report" ]; then
             echo "Copy test reports"
             kubectl cp --retries=10 ${test_pod_name}:/root/testlog.txt testlog.txt -n ${ns}
@@ -225,7 +222,6 @@ if [ ${ACTION} == "test" ]; then
             ls
             cd -
           fi
-        fi
       fi
   done
 
