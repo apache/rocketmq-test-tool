@@ -49,8 +49,7 @@ echo "************************************"
 echo "*          Set config...           *"
 echo "************************************"
 mkdir -p ${HOME}/.kube
-#kube_config=$(echo "${ASK_CONFIG}" | base64 -d)
-kube_config=$(echo "${ASK_CONFIG}")
+kube_config=$(echo "${ASK_CONFIG}" | base64 -d)
 echo "${kube_config}" > ${HOME}/.kube/config
 export KUBECONFIG="${HOME}/.kube/config"
 
