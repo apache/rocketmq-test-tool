@@ -78,7 +78,7 @@ echo -e "${VELA_APP_TEMPLATE}" > ./velaapp.yaml
 sed -i '1d' ./velaapp.yaml
 
 env_uuid=${REPO_NAME}-${GITHUB_RUN_ID}-${JOB_INDEX}
-export env_uuid
+
 
 if [ ${ACTION} == "deploy" ]; then
   echo "************************************"
