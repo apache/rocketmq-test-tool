@@ -1,15 +1,40 @@
-*dependency-reduced-pom.xml
-.classpath
-.project
-.settings/
 target/
-devenv
-*.log*
+result*.md
+test_report*
+nacos_nodejs_testlog.txt
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
 *.iml
-.idea/
-*.versionsBackup
-!NOTICE-BIN
-!LICENSE-BIN
+*.ipr
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+nacos*
+testlog.txt
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
 .DS_Store
-localbin
-nohup.out

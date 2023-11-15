@@ -15,10 +15,18 @@
 # limitations under the License.
 #
 # Container image that runs your code
-FROM cloudnativeofalibabacloud/test-runner:v0.0.1
+FROM maven:3.8.5-jdk-8-slim
 
-# Copies your code file from your action repository to the filesystem path `/` of the container
-COPY entry.sh /entry.sh
+MAINTAINER wuyfee "wyf_mohen@163.com"
 
-# Code file to execute when the docker container starts up (`entry.sh`)
-ENTRYPOINT ["/entry.sh"]
+EXPOSE  9082
+COPY src /src
+COPY pom.xml /pom.xml
+ENV KUBECONFIG=/root/.kube/config
+
+
+RUN mvn clean install -Dmaven.test.skip=true \
+    && mv /target/rocketmq-test-tools-1.0-SNAPSHOT-jar-*.jar ./rocketmq-test-tools.jar \
+    && rm -rf /pom.xml /src /target
+
+ENTRYPOINT ["/bin/sh", "-c","java -jar /rocketmq-test-tools.jar -yamlString=\"${0}\" "]
