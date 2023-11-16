@@ -26,7 +26,7 @@ ENV KUBECONFIG=/root/.kube/config
 
 
 RUN mvn clean install -Dmaven.test.skip=true \
-    && mv /target/rocketmq-test-tools-1.0-SNAPSHOT-jar-*.jar ./rocketmq-test-tools.jar \
+    && mv /target/rocketmq-test-tool-1.0-SNAPSHOT-jar-*.jar ./rocketmq-test-tool.jar \
     && rm -rf /pom.xml /src /target
 
-ENTRYPOINT ["/bin/sh", "-c","java -jar /rocketmq-test-tools.jar -yamlString=\"${0}\" "]
+ENTRYPOINT ["/bin/sh", "-c","java -jar /rocketmq-test-tool.jar -yamlString=\"${0}\" "]
