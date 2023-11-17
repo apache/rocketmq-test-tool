@@ -171,6 +171,8 @@ public class QueryTestPod {
     public boolean downloadDir(String namespace, String podName, String containerName, String srcPath, Path tarPath) {
         try (KubernetesClient client = new KubernetesClientBuilder().build()) {
             client.pods().inNamespace(namespace).withName(podName).inContainer(containerName).dir(srcPath).copy(tarPath);
+            TimeUnit.SECONDS.sleep(2);
+            client.close();
             String xmlPath = tarPath + "/" + srcPath;
             File filePath = new File(xmlPath);
             String[] files = filePath.list((dir, name) -> {
