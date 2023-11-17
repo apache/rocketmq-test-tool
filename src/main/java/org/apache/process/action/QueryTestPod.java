@@ -126,12 +126,12 @@ public class QueryTestPod {
             }
         }
 
-        try (KubernetesClient client = new KubernetesClientBuilder().build()) {
-            client.pods().inNamespace(namespace).withName(testPodName).delete();
-            log.info("Delete test pod: {} success !", testPodName);
-        } catch (Exception e) {
-            log.warn("Delete test pod {} error !", testPodName);
-        }
+//        try (KubernetesClient client = new KubernetesClientBuilder().build()) {
+//            client.pods().inNamespace(namespace).withName(testPodName).delete();
+//            log.info("Delete test pod: {} success !", testPodName);
+//        } catch (Exception e) {
+//            log.warn("Delete test pod {} error !", testPodName);
+//        }
 
         log.info("Test status: " + podStatus);
         return !"Failed".equals(podStatus);
