@@ -67,7 +67,6 @@ public class Deploymodel {
                         "  branch: %s\n" +
                         "repoType: git\n" +
                         "retries: 3\n" +
-                        "timeout: 15m\n" +
                         "url: %s\n" +
                         "values:\n";
         builder.append(String.format(baseString, chartPath, chartBranch, chartGit));
