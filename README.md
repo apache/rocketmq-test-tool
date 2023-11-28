@@ -1,4 +1,4 @@
-# test-tools
+# rocketmq-test-tool
 This project is used for repository testing, including deployment, testing, cleaning.
 ## Preparation
 - ASK cluster: a cluster to run code.
@@ -6,45 +6,95 @@ This project is used for repository testing, including deployment, testing, clea
 ## params
 you should input a yaml format string.
 Attention: 
-- askConfig must be encoder by base64.
+- AskConfig must be encoder by base64.
 - If some of the parameters are not included, set it to null.
-- you can add or delete params in "helm" and "ENV" segment .
-##### example
+- You can add or delete params in "helm" and "ENV" segment .
+- If velauxUsername and velauxPassword is not included, you should create an account in vela system. 
+  project = "wyftest", password and username should be create by following function:
+  ```java
+  /**
+     * get velaUX username and password
+     *
+     * @param kubeConfig ask config
+     * @return username:password
+     */
+    public String getAuthInfoFromConfig(String kubeConfig) {
+        String text = kubeConfig.length() > 150 ? kubeConfig.substring(kubeConfig.length() - 150) : kubeConfig;
+        StringBuilder userName = new StringBuilder();
+        StringBuilder password = new StringBuilder();
+        boolean digitMark = false;
+        for (int index = text.length() - 1; index >= 0; index--) {
+            if (userName.length() >= 6 && password.length() >= 12) {
+                break;
+            }
+            boolean isLetter = Character.isLetter(text.charAt(index));
+            boolean isDigit = Character.isDigit(text.charAt(index));
+            if (isDigit || isLetter) {
+                if (isLetter && userName.length() < 6) {
+                    userName.append(Character.toLowerCase(text.charAt(index)));
+                }
+                if (password.length() < 12) {
+                    if (digitMark && isDigit) {
+                        password.append(text.charAt(index));
+                        digitMark = false;
+                    } else if (!digitMark && isLetter) {
+                        password.append(text.charAt(index));
+                        digitMark = true;
+                    }
+                }
+            }
+        }
+        return userName + ":" + password;
+    }
+  - ```
+    
+#### example
 ###### deploy
-```agsl
+```yaml
 yamlString: 
   action: deploy
   namespace: rocketmq-457628-0
   askConfig: ***********
+  velauxUsername: ***
+  velauxPassword: ***
   waitTimes: 1200
-  velaAppDescription: rocketmq-push-ci-0@abcdefg
+  velaAppDescription: rocketmq-push-ci-123456@abcdefg
   repoName: rocketmq
-  velauxUsername: admin
-  velauxPassword: velaux12345
   helm:
     chart: ./rocketmq-k8s-helm
     git:
-    branch: master
+      branch: master
     repoType: git
     retries: 3
     url: https://ghproxy.com/https://github.com/apache/rocketmq-docker.git
     values:
       nameserver:
         image:
-        repository: wuyfeedocker/rocketm-ci
-        tag: develop-3b416669-cab7-41b4-8cc8-4af851944de2-ubuntu
+          repository: wuyfeedocker/rocketm-ci
+          tag: develop-3b416669-cab7-41b4-8cc8-4af851944de2-ubuntu
       broker:
         image:
-        repository: wuyfeedocker/rocketm-ci
-        tag: develop-3b416669-cab7-41b4-8cc8-4af851944de2-ubuntu
+          repository: wuyfeedocker/rocketm-ci
+          tag: develop-3b416669-cab7-41b4-8cc8-4af851944de2-ubuntu
       proxy:
         image:
-        repository: wuyfeedocker/rocketm-ci
-        tag: develop-3b416669-cab7-41b4-8cc8-4af851944de2-ubuntu
+          repository: wuyfeedocker/rocketm-ci
+          tag: develop-3b416669-cab7-41b4-8cc8-4af851944de2-ubuntu
 ```
+| option             | description                                 | default | necessary |
+|--------------------|---------------------------------------------|--------|-----------|
+| action             | deploy                                      | null   | yes       |
+|velauxUsername      | vela username                               | null   | no        |
+| velauxPassword | vela password                               | null   | no        |
+| namespace          | pod namespace                               | null   | yes       |
+| askConfig          | ask config                                  | null   | yes       |
+| waitTimes          | deploy max time (second)                    | 900 | no        |
+| velaAppDescription | vela app description                        | ""     | no        |
+| repoName           | repo name(such as "nacos", "rocketmq" .etc) | null   | yes       |
+| helm         | helm chart                                  | null   | yes       |
 
 ###### test
-```agsl
+```yaml
 yamlString: |
   action: test
   namespace: rocketmq-457628-0
@@ -53,13 +103,15 @@ yamlString: |
   KIND: Pod
   RESTART_POLICY: Never
   ENV:
-    CODE: https://ghproxy.com/https://github.com/apache/rocketmq-e2e
+    WAIT_TIME: 600 
+    REPO_NAME: apache/rocketmq-e2e
+    CODE: https://github.com/apache/rocketmq-e2e
     BRANCH: master
     CODE_PATH: java/e2e-v4
     CMD: mvn -B test
     ALL_IP: null
   CONTAINER:
-    IMAGE: cloudnativeofalibabacloud/test-runner:v0.0.3
+    IMAGE: cloudnativeofalibabacloud/test-runner:v0.0.4
     RESOURCE_LIMITS:
       cpu: 8
       memory: 8Gi
@@ -67,15 +119,44 @@ yamlString: |
       cpu: 8
       memory: 8Gi
 ```
+| option                            | description                       | default    | necessary |
+|-----------------------------------|-----------------------------------|---------|-----------|
+| action                            | test                              | null       | yes       |
+| namespace                         | pod namespace                     | null       | yes       |
+| askConfig                         | ask config                        | null       | yes       |
+| API_VERSION                         | Kubernetes API version            | v1         | no        |
+| KIND                | pod kind                          | Pod       | no        |
+| RESTART_POLICY                          | pod restart policy                | Never       | no        |
+| ENV.WAIT_TIME                     | test pod expiration time (second) | 900      | no        |
+| ENV.REPO_NAME                     | repository whole name             | null       | yes       |
+| ENV.CODE                          | test code url                     | null       | yes       |
+| ENV.BRANCH                        | code branch                       | null       | yes       |
+| ENV.CODE_PATH                     | test code path                    | null       | yes       |
+| ENV.CMD                           | test command                      | null       | yes       |
+| ENV.ALL_IP                        | cluster ips                       | null       | no        |
+| CONTAINER.IMAGE                   | pod container image               | null       | yes       |
+| CONTAINER.RESOURCE_LIMITS.cpu     | pod container cpu limit           | null       | no        |
+| CONTAINER.RESOURCE_LIMITS.memory  | pod container memory limit        | null       | no        |
+| CONTAINER.RESOURCE_REQUIRE.cpu    | pod container cpu require         | null       | no        |
+| CONTAINER.RESOURCE_REQUIRE.memory | pod container memory require      | null       | no        |
 ###### clean
-```agsl
+```yaml
 yamlString: |
   action: clean
   namespace: rocketmq-457628-0
+  velauxUsername: ***
+  velauxPassword: ***
   askConfig: ***********
-  velauxUsername: admin
-  velauxPassword: velaux12345
 ```
+| option         | description   | default    | necessary |
+|----------------|---------------|---------|-----------|
+| action         | clean         | null     | yes       |
+| velauxUsername | vela username |   null  | no |
+| velauxPassword | vela password | null       | no        |
+| namespace      | pod namespace | null       | yes       |
+| askConfig      | ask config               | null   | yes       |
+
+
 
 
 ## Usage
@@ -85,94 +166,95 @@ yamlString: |
 ```agsl
 cd test-tools
 mvn clean install -Dmaven.test.skip=true
-mv /target/rocketmq-test-tools-*-SNAPSHOT-jar-*.jar ./rocketmq-test-tools.jar
+mv /target/rocketmq-test-tool-*-SNAPSHOT-jar-*.jar ./rocketmq-test-tool.jar
 # quick start run
-jar -jar rocketmq-test-tools.jar -yamlString=${your yamlString}
+jar -jar rocketmq-test-tool.jar -yamlString=${your yamlString}
 ```
 ### by docker images
 ```
 # build docker images
-docker build -t test-tools
+docker build -t test-tool
 # quick start run
-docker run -it test-tools -yamlString=${your yamlString}
+docker run -it test-tool -yamlString=${your yamlString}
 ```
-### deploy in github action
-Attention: if you use this resposity dockerfile, make sure all params input and are in order. Example follow：
-#### rocketmq example
+### in github action
+#### deploy 
+```yaml
+- uses: Apache/rocketmq-test-tool@java-dev
+  name: Deploy nacos
+  with:
+    yamlString: |
+      action: deploy
+      namespace: nacos-123456789-0
+      askConfig: ******
+      waitTimes: 2000
+      velaAppDescription: nacos-push-ci-123@$abcdefg
+      repoName: nacos
+      helm:
+        chart: ./cicd/helm
+        git:
+          branch: main
+        repoType: git
+        retries: 3
+        url: https://ghproxy.com/https://github.com/nacos-group/nacos-e2e.git
+        values:
+          namespace: nacos-123456789-0
+          global:
+            mode: cluster
+          nacos:
+            replicaCount: 3
+            image:
+              repository: wuyfeedocker/nacos-ci
+              tag: develop-cee62800-0cb5-478f-9e42-aeb1124db716-8
+            storage:
+              type: mysql
+              db:
+                port: 3306
+                username: nacos
+                password: nacos
+                param: characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false
+          service:
+            nodePort: 30000
+            type: ClusterIP
 ```
-test:
-    name: Deploy RocketMQ
-    runs-on: ubuntu-latest
-    steps:
-      - uses: Wuyunfan-BUPT/test-tools@main
-        name: Deploy, run e2etest and clean rocketmq
-        with:
-          testRepo: "rocketmq"
-          action: "deploy"
-          version: "your-version"
-          askConfig: "your ask config"
-          velauxUsername: "your velaux username"
-          velauxPassword: "your velaux password"
-          chartGit: "https://ghproxy.com/https://github.com/apache/rocketmq-docker.git"
-          chartBranch: "master"
-          chartPath: "./rocketmq-k8s-helm"
-          testCodeGit: "https://ghproxy.com/https://github.com/apache/rocketmq-e2e.git"
-          testCodeBranch: "master"
-          testCodePath: "java/e2e"
-          testCmdBase: "mvn -B test"
-          jobIndex: your job index
-          helmValue: |
-            nameserver:
-              image:
-                repository: wuyfeedocker/rocketm-ci
-                tag: develop-82ca7301-3b14-4f86-aaa8-4881ebe4762d-ubuntu
-            broker:
-              image:
-                repository: wuyfeedocker/rocketm-ci
-                tag: develop-82ca7301-3b14-4f86-aaa8-4881ebe4762d-ubuntu
-            proxy:
-              image:
-                repository: wuyfeedocker/rocketm-ci
-                tag: develop-82ca7301-3b14-4f86-aaa8-4881ebe4762d-ubuntu
+#### test
+```yaml
+steps:
+  - uses: Apache/rocketmq-test-tool@java-dev
+    name: java e2e test
+    with:
+      yamlString: |
+        action: test
+        namespace: nacos-123456789-0
+        askConfig: ******
+        API_VERSION: v1
+        KIND: Pod
+        RESTART_POLICY: Never
+        ENV:
+          WAIT_TIME: 900
+          REPO_NAME: nacos-group/nacos-e2e
+          CODE: https://github.com/nacos-group/nacos-e2e
+          BRANCH: main
+          CODE_PATH: java/nacos-2X
+          CMD: mvn clean test -B
+          ALL_IP: null
+        CONTAINER:
+          IMAGE: cloudnativeofalibabacloud/test-runner:v0.0.4
+          RESOURCE_LIMITS:
+            cpu: 8
+            memory: 8Gi
+          RESOURCE_REQUIRE:
+            cpu: 8
+            memory: 8Gi
 ```
-#### nacos example
-```
-test:
-    name: Deploy nacos-server
-    runs-on: ubuntu-latest
-      - uses: Wuyunfan-BUPT/test-tools@main
-        name: Deploy and run nacos test
-        with:
-          testRepo: "nacos"
-          action: ""
-          version: your-version
-          askConfig: "your asc config"
-          velauxUsername: "your velaux username"
-          velauxPassword: "your velaux password"
-          chartGit: "https://ghproxy.com/https://github.com/Wuyunfan-BUPT/nacos-docker.git"
-          chartBranch: "master"
-          chartPath: "./helm"
-          testCodeGit: "https://github.com/nacos-group/nacos-e2e.git"
-          testCodeBranch: "master"
-          testCodePath: "java/nacos-2X"
-          testCmdBase: 'mvn clean test -B'
-          jobIndex: your index
-          helmValue: |
-            global:
-              mode: cluster
-            nacos:
-              replicaCount: 3
-              image: 
-                repository: wuyfeedocker/nacos-ci
-                tag: develop-88ccc682-10b0-4948-811a-8eba750e14ea-8
-              storage:
-                type: mysql
-                db:
-                  port: 3306
-                  username: nacos
-                  password: nacos
-                  param: characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false
-            service:
-              nodePort: 30000
-              type: ClusterIP
+clean
+```yaml
+steps:
+  - uses: APache/rocketmq-test-tool@java-dev
+    name: clean
+    with:
+      yamlString: |
+        action: clean
+        namespace: nacos-123456789-0
+        askConfig: ******
 ```

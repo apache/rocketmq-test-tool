@@ -18,7 +18,7 @@ public class ProjectCleanTest {
     @Test
     public void testNacosClean() throws IOException, InterruptedException {
         String input = "action: clean\n" +
-                "namespace: nacos-6196355040-8\n" +
+                "namespace: nacos-6196355040-2\n" +
                 "ask-config: ${{ secrets.ASK_CONFIG_VIRGINA }}\n";
         String usrHome = System.getProperty("user.home");
         String fileName = String.format("%s/.kube/config", usrHome);
@@ -28,11 +28,12 @@ public class ProjectCleanTest {
         Configs.VELAUX_USERNAME = authentificationInfo[0];
         Configs.VELAUX_PASSWORD = authentificationInfo[1];
 
-        new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
+        //new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
         LinkedHashMap<String, Object> inputMap = yamlToMap(input);
         EnvClean envClean = new EnvClean();
         Assert.assertTrue(envClean.clean(inputMap));
     }
+
     @Test
     public void testRocketmqClean() throws IOException, InterruptedException {
         String input = "action: clean\n" +

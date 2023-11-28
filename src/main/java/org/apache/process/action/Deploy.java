@@ -59,7 +59,7 @@ public class Deploy {
 
         authAction.setToken("refresh_token");
         String componentProperty = paramsMap.get("helm").toString();
-        String bodyContent = String.format(Deploymodel.APPLICATION_BODY_COMPONENT, namespace, Configs.PROJECT_NAME, paramsMap.get("velaAppDescription"), namespace, namespace, paramsMap.get("repoName"), componentProperty);
+        String bodyContent = String.format(Deploymodel.APPLICATION_BODY_COMPONENT, namespace, Configs.PROJECT_NAME, paramsMap.getOrDefault("velaAppDescription", ""), namespace, namespace, paramsMap.get("repoName"), componentProperty);
         try (Response createAppResponse = appActions.createApplication(bodyContent)) {
             PrintInfo.printRocketInfo(createAppResponse, String.format(String.format("Generate %s Application success!", namespace)));
         } catch (Exception e) {
@@ -82,7 +82,7 @@ public class Deploy {
         }
 
         log.info("Query pod {} Application status", namespace);
-        int waitTimes = Integer.parseInt(paramsMap.get("waitTimes").toString());
+        int waitTimes = Integer.parseInt(paramsMap.getOrDefault("waitTimes", "900").toString());
         LocalDateTime startTime = LocalDateTime.now();
         Response response = null;
 

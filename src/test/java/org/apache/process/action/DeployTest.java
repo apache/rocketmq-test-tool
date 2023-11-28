@@ -15,10 +15,10 @@ import static org.apache.process.utils.GetParam.parseDeployInput;
 public class DeployTest {
     @Test
     public void testNacosClusterStartDeploy() throws IOException, InterruptedException {
-        String input="action: deploy\n" +
+        String input = "action: deploy\n" +
                 "ask-config: \"${{ secrets.ASK_CONFIG_VIRGINA }}\"\n" +
                 "waitTimes: 1200\n" +
-                "namespace: nacos-6196355040-1\n" +
+                "namespace: nacos-6196355040-3\n" +
                 "velaAppDescription: nacos-push_ci-123456@abcdefghij\n" +
                 "repoName: nacos\n" +
                 "helm:\n" +
@@ -29,14 +29,14 @@ public class DeployTest {
                 "  retries: 3\n" +
                 "  url: https://github.com/nacos-group/nacos-e2e.git\n" +
                 "  values:\n" +
-                "    namespace: nacos-6196355040-1\n" +
+                "    namespace: nacos-6196355040-3\n" +
                 "    global:\n" +
                 "      mode: cluster\n" +
                 "    nacos:\n" +
                 "      replicaCount: 3\n" +
                 "      image:\n" +
                 "        repository: wuyfeedocker/nacos-ci\n" +
-                "        tag: develop-80b03862-43ba-42ec-902a-48de9523270d-8\n" +
+                "        tag: develop-cee62800-0cb5-478f-9e42-aeb1124db716-8\n" +
                 "      storage:\n" +
                 "        type: mysql\n" +
                 "        db:\n" +
@@ -45,9 +45,9 @@ public class DeployTest {
                 "          password: nacos\n" +
                 "          param: characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false\n" +
                 "    service:\n" +
-                "      nodePort: 30089\n" +
+                "      nodePort: 30015\n" +
                 "      type: ClusterIP";
-                ;
+        ;
         // read config
         String usrHome = System.getProperty("user.home");
         String fileName = String.format("%s/.kube/config", usrHome);
@@ -55,23 +55,22 @@ public class DeployTest {
         System.out.println(input);
 
         // set vela username and password
-        String[] authInfo =   new ConfigUtils().getAuthInfoFromConfig(config).split(":");
+        String[] authInfo = new ConfigUtils().getAuthInfoFromConfig(config).split(":");
         Configs.VELAUX_USERNAME = authInfo[0];
         Configs.VELAUX_PASSWORD = authInfo[1];
 
-        new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
+        //new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
         Deploy deploy = new Deploy();
         HashMap<String, Object> deployMap = parseDeployInput(input, "helm");
         Assert.assertTrue(deploy.startDeploy(deployMap));
     }
 
-
     @Test
     public void testNacosStandaloneStartDeploy() throws InterruptedException, IOException {
-        String input="action: deploy\n" +
+        String input = "action: deploy\n" +
                 "ask-config: \"${{ secrets.ASK_CONFIG_VIRGINA }}\"\n" +
                 "waitTimes: 1200\n" +
-                "namespace: nacos-6196355040-8\n" +
+                "namespace: nacos-6196355040-0\n" +
                 "velaAppDescription: nacos-push_ci-123456@abcdefghij\n" +
                 "repoName: nacos\n" +
                 "helm:\n" +
@@ -82,14 +81,14 @@ public class DeployTest {
                 "  retries: 3\n" +
                 "  url: https://github.com/nacos-group/nacos-e2e.git\n" +
                 "  values:\n" +
-                "    namespace: nacos-6196355040-8\n" +
+                "    namespace: nacos-6196355040-0\n" +
                 "    global:\n" +
                 "      mode: standalone\n" +
                 "    nacos:\n" +
                 "      replicaCount: 1\n" +
                 "      image:\n" +
                 "        repository: wuyfeedocker/nacos-ci\n" +
-                "        tag: develop-80b03862-43ba-42ec-902a-48de9523270d-8\n" +
+                "        tag: develop-cee62800-0cb5-478f-9e42-aeb1124db716-8\n" +
                 "      storage:\n" +
                 "        type: embedded\n" +
                 "        db:\n" +
@@ -104,11 +103,11 @@ public class DeployTest {
         String fileName = String.format("%s/.kube/config", usrHome);
         String config = new String(Files.readAllBytes(Paths.get(fileName)));
 
-        String authentificationInfo[] =  new ConfigUtils().getAuthInfoFromConfig(config).split(":");
+        String authentificationInfo[] = new ConfigUtils().getAuthInfoFromConfig(config).split(":");
         Configs.VELAUX_USERNAME = authentificationInfo[0];
         Configs.VELAUX_PASSWORD = authentificationInfo[1];
 
-        new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
+        //new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
         Deploy deploy = new Deploy();
         HashMap<String, Object> deployMap = parseDeployInput(input, "helm");
         Assert.assertTrue(deploy.startDeploy(deployMap));
@@ -117,7 +116,7 @@ public class DeployTest {
 
     @Test
     public void testRocketmqStartDeploy() throws InterruptedException, IOException {
-        String input="action: deploy\n" +
+        String input = "action: deploy\n" +
                 "ask-config: \"${{ secrets.ASK_CONFIG_VIRGINA }}\"\n" +
                 "waitTimes: 1200\n" +
                 "namespace: rocketmq-12345562-3\n" +
@@ -142,14 +141,14 @@ public class DeployTest {
                 "    proxy:\n" +
                 "      image:\n" +
                 "        repository: wangtong719/ci-test\n" +
-                "        tag: test2-fd2c5471-bc7a-4388-a6d5-41501e29cfa8-ubuntu\n" ;
+                "        tag: test2-fd2c5471-bc7a-4388-a6d5-41501e29cfa8-ubuntu\n";
 
         String usrHome = System.getProperty("user.home");
         String fileName = String.format("%s/.kube/config", usrHome);
         String config = new String(Files.readAllBytes(Paths.get(fileName)));
 
         ConfigUtils configUtils = new ConfigUtils();
-        String[] authentificationInfo =  configUtils.getAuthInfoFromConfig(config).split(":");
+        String[] authentificationInfo = configUtils.getAuthInfoFromConfig(config).split(":");
         Configs.VELAUX_USERNAME = authentificationInfo[0];
         Configs.VELAUX_PASSWORD = authentificationInfo[1];
 

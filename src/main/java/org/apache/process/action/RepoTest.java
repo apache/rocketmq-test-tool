@@ -51,7 +51,7 @@ public class RepoTest {
         }
         // biild env
         LinkedHashMap<String, Object> envMap = (LinkedHashMap) inputMap.get("ENV");
-        if (envMap.get("ALL_IP") == null || "null".equals(envMap.get("ALL_IP"))) {
+        if (!envMap.containsValue("ALL_IP") || envMap.get("ALL_IP") == null || "null".equals(envMap.get("ALL_IP"))) {
             /* get all IP */
             try (KubernetesClient client = new DefaultKubernetesClient()) {
                 List<Pod> pods = client.pods().inNamespace(namespace).list().getItems();
@@ -59,7 +59,7 @@ public class RepoTest {
                 for (Pod pod : pods) {
                     allIP.append(pod.getMetadata().getName()).append(":").append(pod.getStatus().getPodIP()).append(",");
                 }
-                if(allIP.length()== 0){
+                if (allIP.length() == 0) {
                     log.error("No pod found in current namespace: {}. Please check the namespace name and the pod name.", namespace);
                     return false;
                 }
@@ -76,14 +76,14 @@ public class RepoTest {
 
         try (final KubernetesClient client = new KubernetesClientBuilder().build()) {
             Pod pod = new PodBuilder()
-                    .withApiVersion(inputMap.get("API_VERSION").toString())
-                    .withKind(inputMap.get("KIND").toString())
+                    .withApiVersion(inputMap.getOrDefault("API_VERSION", "v1").toString())
+                    .withKind(inputMap.getOrDefault("KIND", "Pod").toString())
                     .withNewMetadata()
                     .withName(testPodName)
                     .withNamespace(namespace)
                     .endMetadata()
                     .withNewSpec()
-                    .withRestartPolicy(inputMap.get("RESTART_POLICY").toString())
+                    .withRestartPolicy(inputMap.getOrDefault("RESTART_POLICY", "Never").toString())
                     .withContainers(new ContainerBuilder()
                             .withName(testPodName)
                             .withImage(containerMap.get("IMAGE").toString())

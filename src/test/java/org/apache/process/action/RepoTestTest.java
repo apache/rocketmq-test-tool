@@ -13,14 +13,14 @@ public class RepoTestTest {
     @Test
     public void testNacosRunJavaTest() throws IOException, InterruptedException {
         String input = "action: test\n" +
-                "namespace: nacos-6196355040-2\n" +
+                "namespace: nacos-6196355040-3\n" +
                 "ask-config: ${{ secrets.ASK_CONFIG_VIRGINA }}\n" +
                 "API_VERSION: v1\n" +
                 "KIND: Pod\n" +
                 "RESTART_POLICY: \"Never\" \n" +
                 "ENV:\n" +
                 "  WAIT_TIME: 600\n" +
-                "  REPO_NAME: Wuyunfan-BUPT/nacos-e2e\n" +
+                "  REPO_NAME: nacos-grou/nacos-e2e\n" +
                 "  CODE: https://github.com/nacos-group/nacos-e2e\n" +
                 "  BRANCH: main\n" +
                 "  CODE_PATH: java/nacos-2X\n" +
@@ -36,7 +36,7 @@ public class RepoTestTest {
                 "    memory: 8Gi";
 
 
-        new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
+        //new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
         LinkedHashMap<String, Object> inputMap = yamlToMap(input);
         RepoTest project = new RepoTest();
         project.runTest(inputMap);
@@ -50,7 +50,7 @@ public class RepoTestTest {
     @Test
     public void testNacosRunGoTest() throws IOException, InterruptedException {
         String input = "action: test\n" +
-                "namespace: nacos-6196355040-15\n" +
+                "namespace: nacos-6196355040-3\n" +
                 "ask-config: ${{ secrets.ASK_CONFIG_VIRGINA }}\n" +
                 "API_VERSION: v1\n" +
                 "KIND: Pod\n" +
@@ -76,7 +76,7 @@ public class RepoTestTest {
                 "    cpu: 8\n" +
                 "    memory: 8Gi";
 
-        new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
+        //new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
         LinkedHashMap<String, Object> inputMap = yamlToMap(input);
 
         RepoTest project = new RepoTest();
@@ -92,7 +92,7 @@ public class RepoTestTest {
     public void testNacosRunCsharpTest() throws IOException, InterruptedException {
         // nacos-group/nacos-e2e  main
         String input = "action: test\n" +
-                "namespace: nacos-6196355040-4\n" +
+                "namespace: nacos-6196355040-3\n" +
                 "ask-config: ${{ secrets.ASK_CONFIG_VIRGINA }}\n" +
                 "API_VERSION: v1\n" +
                 "KIND: Pod\n" +
@@ -118,7 +118,7 @@ public class RepoTestTest {
                 "  RESOURCE_REQUIRE:\n" +
                 "    cpu: 8\n" +
                 "    memory: 8Gi";
-        new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
+        //new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
         LinkedHashMap<String, Object> inputMap = yamlToMap(input);
         RepoTest project = new RepoTest();
         project.runTest(inputMap);
@@ -172,22 +172,23 @@ public class RepoTestTest {
     @Test
     public void testNacosRunPythonTest() throws IOException, InterruptedException {
         String input = "action: test\n" +
-                "namespace: nacos-6196355040-4\n" +
+                "namespace: nacos-6196355040-1\n" +
                 "ask-config: ${{ secrets.ASK_CONFIG_VIRGINA }}\n" +
                 "API_VERSION: v1\n" +
                 "KIND: Pod\n" +
                 "RESTART_POLICY: \"Never\" \n" +
                 "ENV:\n" +
-                "  WAIT_TIME: 300\n" +
-                "  REPO_NAME: Wuyunfan-BUPT/nacos-e2e\n" +
-                "  CODE: https://github.com/Wuyunfan-BUPT/nacos-e2e\n" +
-                "  BRANCH: yf-dev\n" +
+                "  WAIT_TIME: 3000\n" +
+                "  REPO_NAME: nacos-group/nacos-e2e\n" +
+                "  CODE: https://github.com/nacos-group/nacos-e2e\n" +
+                "  BRANCH: main\n" +
                 "  CODE_PATH: python\n" +
                 "  CMD: |\n" +
                 "    cd /root/code/python \n" +
                 "    pip3 install -r requirements.txt \n" +
                 "    source ~/.bashrc \n" +
                 "    cd nacospythontest && pytest --junitxml ../target/surefire-reports/TEST-report.xml test/*_test.py  --log-cli-level=DEBUG\n" +//
+//                "    sleep 30000\n" +
                 "  ALL_IP: null\n" +
                 "CONTAINER:\n" +
                 "  IMAGE: cloudnativeofalibabacloud/test-runner:v0.0.4\n" +
