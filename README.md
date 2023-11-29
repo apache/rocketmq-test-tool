@@ -1,5 +1,5 @@
 # rocketmq-test-tool
-This project is used for repository testing, including deployment, testing, cleaning.
+This project is used for repository pipeline, including deployment, testing, cleaning.
 ## Preparation
 - ASK cluster: a cluster to run code.
 - install kubevela in ask cluster.
@@ -50,6 +50,7 @@ Attention:
     
 #### example
 ###### deploy
+use kubevela API to deploy application.
 ```yaml
 yamlString: 
   action: deploy
@@ -94,6 +95,7 @@ yamlString:
 | helm         | helm chart                                  | null   | yes       |
 
 ###### test
+use kubernetes API to execute test.
 ```yaml
 yamlString: |
   action: test
@@ -140,6 +142,7 @@ yamlString: |
 | CONTAINER.RESOURCE_REQUIRE.cpu    | pod container cpu require         | null       | no        |
 | CONTAINER.RESOURCE_REQUIRE.memory | pod container memory require      | null       | no        |
 ###### clean
+use kubernetes API and kubevela API to clean resource.
 ```yaml
 yamlString: |
   action: clean
@@ -155,8 +158,6 @@ yamlString: |
 | velauxPassword | vela password | null       | no        |
 | namespace      | pod namespace | null       | yes       |
 | askConfig      | ask config               | null   | yes       |
-
-
 
 
 ## Usage
