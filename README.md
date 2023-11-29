@@ -8,7 +8,7 @@ KubeVela needs to be installed in Kubernetes before use.
   - An account in vela system. 
     - If you have an account, you should set this velauxUsername and velauxPassword in yamlString. 
     - If velauxUsername and velauxPassword is not included in yamlString, you should create an account in vela system, password and username should be created by following function, this tool will genarate username and password by ask config: 
-    ```java
+```java
     /**
       * get velaUX username and password
       *
@@ -43,7 +43,7 @@ KubeVela needs to be installed in Kubernetes before use.
           }
           return userName + ":" + password;
       }
-  ``` 
+``` 
 #### example
 you should input a yaml format string.
 Attention:
