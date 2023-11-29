@@ -1,16 +1,14 @@
-# rocketmq-test-tool
-This project is used for repository pipeline, including deployment, testing, cleaning.
+# Apache RocketMQ Test Tool
+This tool uses Helm and KubeVela to deploy applications and execute tests in Kubernetes.
+KubeVela needs to be installed in Kubernetes before use.
+
+
 ## Preparation
 - ASK cluster: a cluster to run code.
-- install kubevela in ask cluster.
-## params
-you should input a yaml format string.
-Attention: 
-- AskConfig must be encoder by base64.
-- If some of the parameters are not included, set it to null.
-- You can add or delete params in "helm" and "ENV" segment .
-- If velauxUsername and velauxPassword is not included, you should create an account in vela system. 
-  project = "wyftest", password and username should be create by following function:
+- Install kubevela in ask cluster.
+- An account in vela system. 
+  - If you have an account, you should set this velauxUsername and velauxPassword in yamlString. 
+  - If velauxUsername and velauxPassword is not included in yamlString, you should create an account in vela system, password and username should be created by following function, this tool will genarate username and password by ask config: 
   ```java
   /**
      * get velaUX username and password
@@ -49,6 +47,11 @@ Attention:
   - ```
     
 #### example
+you should input a yaml format string.
+Attention:
+- AskConfig must be encoder by base64.
+- If some of the parameters are not included, set it to null.
+- You can add or delete params in "helm" and "ENV" segment .
 ###### deploy
 use kubevela API to deploy application.
 ```yaml
@@ -58,6 +61,7 @@ yamlString:
   askConfig: ***********
   velauxUsername: ***
   velauxPassword: ***
+  projectName: wyftest
   waitTimes: 1200
   velaAppDescription: rocketmq-push-ci-123456@abcdefg
   repoName: rocketmq
@@ -87,6 +91,7 @@ yamlString:
 | action             | deploy                                      | null   | yes       |
 |velauxUsername      | vela username                               | null   | no        |
 | velauxPassword | vela password                               | null   | no        |
+|projectName | vela project | wyftest | no |
 | namespace          | pod namespace                               | null   | yes       |
 | askConfig          | ask config                                  | null   | yes       |
 | waitTimes          | deploy max time (second)                    | 900 | no        |
@@ -162,6 +167,7 @@ yamlString: |
 
 ## Usage
 
+<!-- start usage -->
 ## start project
 ### by java jar
 ```agsl
@@ -181,7 +187,7 @@ docker run -it test-tool -yamlString=${your yamlString}
 ### in github action
 #### deploy 
 ```yaml
-- uses: Apache/rocketmq-test-tool@java-dev
+- uses: apache/rocketmq-test-tool@java-dev
   name: Deploy nacos
   with:
     yamlString: |
@@ -221,7 +227,7 @@ docker run -it test-tool -yamlString=${your yamlString}
 #### test
 ```yaml
 steps:
-  - uses: Apache/rocketmq-test-tool@java-dev
+  - uses: apache/rocketmq-test-tool@java-dev
     name: java e2e test
     with:
       yamlString: |
@@ -251,7 +257,7 @@ steps:
 clean
 ```yaml
 steps:
-  - uses: APache/rocketmq-test-tool@java-dev
+  - uses: apache/rocketmq-test-tool@java-dev
     name: clean
     with:
       yamlString: |
@@ -259,3 +265,6 @@ steps:
         namespace: nacos-123456789-0
         askConfig: ******
 ```
+<!-- end usage -->
+# License
+[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0.html) Copyright (C) Apache Software Foundation

@@ -73,6 +73,9 @@ public class Main {
                 Configs.VELAUX_USERNAME = authentificationInfo[0];
                 Configs.VELAUX_PASSWORD = authentificationInfo[1];
             }
+            if(inputMap.getOrDefault("projectName", null) != null){
+                Configs.PROJECT_NAME = inputMap.get("projectName").toString();
+            }
 
             configUtils.setConfig(askConfig);
             new PortForward().startPortForward(Configs.VELA_NAMESPACE, Configs.VELA_POD_LABELS, Configs.PORT_FROWARD);
