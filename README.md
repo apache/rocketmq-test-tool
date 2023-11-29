@@ -4,8 +4,7 @@ KubeVela needs to be installed in Kubernetes before use.
 
 
 ## Preparation
-- ASK cluster: a cluster to run code.
-- Install kubevela in ask cluster.
+- Install kubevela in Kubernetes.
 - An account in vela system. 
   - If you have an account, you should set this velauxUsername and velauxPassword in yamlString. 
   - If velauxUsername and velauxPassword is not included in yamlString, you should create an account in vela system, password and username should be created by following function, this tool will genarate username and password by ask config: 
