@@ -5,46 +5,45 @@ KubeVela needs to be installed in Kubernetes before use.
 
 ## Preparation
 - Install kubevela in Kubernetes.
-- An account in vela system. 
-  - If you have an account, you should set this velauxUsername and velauxPassword in yamlString. 
-  - If velauxUsername and velauxPassword is not included in yamlString, you should create an account in vela system, password and username should be created by following function, this tool will genarate username and password by ask config: 
-  ```java
-  /**
-     * get velaUX username and password
-     *
-     * @param kubeConfig ask config
-     * @return username:password
-     */
+  - An account in vela system. 
+    - If you have an account, you should set this velauxUsername and velauxPassword in yamlString. 
+    - If velauxUsername and velauxPassword is not included in yamlString, you should create an account in vela system, password and username should be created by following function, this tool will genarate username and password by ask config: 
+    ```java
+    /**
+      * get velaUX username and password
+      *
+      * @param kubeConfig ask config
+      * @return username:password
+      */
     public String getAuthInfoFromConfig(String kubeConfig) {
-        String text = kubeConfig.length() > 150 ? kubeConfig.substring(kubeConfig.length() - 150) : kubeConfig;
-        StringBuilder userName = new StringBuilder();
-        StringBuilder password = new StringBuilder();
-        boolean digitMark = false;
-        for (int index = text.length() - 1; index >= 0; index--) {
-            if (userName.length() >= 6 && password.length() >= 12) {
-                break;
-            }
-            boolean isLetter = Character.isLetter(text.charAt(index));
-            boolean isDigit = Character.isDigit(text.charAt(index));
-            if (isDigit || isLetter) {
-                if (isLetter && userName.length() < 6) {
-                    userName.append(Character.toLowerCase(text.charAt(index)));
-                }
-                if (password.length() < 12) {
-                    if (digitMark && isDigit) {
-                        password.append(text.charAt(index));
-                        digitMark = false;
-                    } else if (!digitMark && isLetter) {
-                        password.append(text.charAt(index));
-                        digitMark = true;
-                    }
-                }
-            }
-        }
-        return userName + ":" + password;
-    }
-  - ```
-    
+          String text = kubeConfig.length() > 150 ? kubeConfig.substring(kubeConfig.length() - 150) : kubeConfig;
+          StringBuilder userName = new StringBuilder();
+          StringBuilder password = new StringBuilder();
+          boolean digitMark = false;
+          for (int index = text.length() - 1; index >= 0; index--) {
+              if (userName.length() >= 6 && password.length() >= 12) {
+                  break;
+              }
+              boolean isLetter = Character.isLetter(text.charAt(index));
+              boolean isDigit = Character.isDigit(text.charAt(index));
+              if (isDigit || isLetter) {
+                  if (isLetter && userName.length() < 6) {
+                      userName.append(Character.toLowerCase(text.charAt(index)));
+                  }
+                  if (password.length() < 12) {
+                      if (digitMark && isDigit) {
+                          password.append(text.charAt(index));
+                          digitMark = false;
+                      } else if (!digitMark && isLetter) {
+                          password.append(text.charAt(index));
+                          digitMark = true;
+                      }
+                  }
+              }
+          }
+          return userName + ":" + password;
+      }
+  ``` 
 #### example
 you should input a yaml format string.
 Attention:
