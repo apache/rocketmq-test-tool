@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 # Container image that runs your code
-FROM cloudnativeofalibabacloud/test-runner:v0.0.1
+FROM registry.cn-guangzhou.aliyuncs.com/cc-aliyun/test-runner:v0.0.2
 
 RUN mkdir /chaos-test
 COPY ./chaos-test/ /chaos-test
