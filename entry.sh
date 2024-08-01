@@ -505,7 +505,7 @@ if [ ${ACTION} == "clean" ]; then
 
     # TODO : the name of release should be a variable
     helm uninstall rocketmq -n ${env}
-    # helm uninstall chaos-mesh -n ${chaos_mesh_ns}
+    helm uninstall chaos-mesh -n ${chaos_mesh_ns}
 
     # vela delete ${env} -n ${env} -y
     all_pod_name=`kubectl get pods --no-headers -o custom-columns=":metadata.name" -n ${env}`
@@ -526,10 +526,14 @@ if [ ${ACTION} == "clean" ]; then
     sleep 3
     kubectl delete namespace ${chaos_mesh_ns} --wait=false
     kubectl delete namespace ${DELETE_ENV} --wait=false
-    kubectl get ns ${DELETE_ENV} -o json | jq '.spec.finalizers=[]' > ns-without-finalizers.json
-    cat ns-without-finalizers.json
-    curl -X PUT http://localhost:8001/api/v1/namespaces/${DELETE_ENV}/finalize -H "Content-Type: application/json" --data-binary @ns-without-finalizers.json
 
+    # remove finalizers
+    for ns in ${chaos_mesh_ns} ${DELETE_ENV}; do
+        kubectl get ns ${ns} -o json | jq '.spec.finalizers=[]' > ns-without-finalizers.json
+        cat ns-without-finalizers.json
+        curl -X PUT http://localhost:8001/api/v1/namespaces/${ns}/finalize -H "Content-Type: application/json" --data-binary @ns-without-finalizers.json
+    done
+    
     kill $PID
 fi
 
