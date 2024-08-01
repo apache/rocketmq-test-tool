@@ -442,9 +442,9 @@ if [ ${ACTION} == "chaos-test" ]; then
     
     # deploy a pod for test ：openchaos-controller
     # ConfigMap
-    kubectl apply -f /root/chaos-test/openchaos/driver-rocketmq.yaml -n ${env_uuid}
+    kubectl apply -f /chaos-test/openchaos/driver-rocketmq.yaml -n ${env_uuid}
 
-    kubectl apply -f /root/chaos-test/openchaos/chaos-controller.yaml -n ${env_uuid}
+    kubectl apply -f /chaos-test/openchaos/chaos-controller.yaml -n ${env_uuid}
     sleep 10
     
     test_pod_name=$(kubectl get pods -n ${env_uuid} -l app=openchaos-controller -o jsonpath='{.items[0].metadata.name}')
