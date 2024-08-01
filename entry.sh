@@ -358,7 +358,11 @@ if [ ${ACTION} == "clean" ]; then
 
     env=${env_uuid}
 
-    vela delete ${env} -n ${env} -y
+    # TODO : the name of release should be a variable
+    helm uninstall rocketmq -n ${env}
+    # helm uninstall chaos-mesh -n ${chaos_mesh_ns}
+
+    # vela delete ${env} -n ${env} -y
     all_pod_name=`kubectl get pods --no-headers -o custom-columns=":metadata.name" -n ${env}`
     for pod in $all_pod_name;
     do
@@ -373,8 +377,9 @@ if [ ${ACTION} == "clean" ]; then
 
     DELETE_ENV=${env}
 
-    vela env delete ${DELETE_ENV} -y
+    # vela env delete ${DELETE_ENV} -y
     sleep 3
+    # kubectl delete namespace ${chaos_mesh_ns} --wait=false
     kubectl delete namespace ${DELETE_ENV} --wait=false
     kubectl get ns ${DELETE_ENV} -o json | jq '.spec.finalizers=[]' > ns-without-finalizers.json
     cat ns-without-finalizers.json
