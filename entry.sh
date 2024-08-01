@@ -353,6 +353,149 @@ if [ ${ACTION} == "test_local" ]; then
   exit ${exit_code}
 fi
 
+CHAOS_MESH_FAULT_TEMPLATE='
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay
+spec:
+  action: delay
+  mode: one
+  selector:
+    namespaces:
+      - ${ns}
+    labelSelectors:
+      "app.kubernetes.io/name": "broker"
+      "app.kubernetes.io/instance": "rocketmq"
+  delay:
+    latency: "100ms"
+  duration: "30s"
+'
+
+echo -e "${CHAOS_MESH_FAULT_TEMPLATE}" > ./chaos-mesh-fault.yaml
+sed -i '1d' ./chaos-mesh-fault.yaml
+
+if [ ${ACTION} == "chaos-test" ]; then
+    echo "************************************"
+    echo "*         Chaos test...            *"
+    echo "************************************"
+
+    # start crond
+    crond
+
+    # check crond 
+    if ps aux | grep '[c]rond' > /dev/null
+    then
+        echo "crond is running"
+    else
+        echo "Failed to start crond"
+        exit 1
+    fi
+
+    # deploy chaos-mesh
+    helm repo add chaos-mesh https://charts.chaos-mesh.org
+    kubectl create ns "${chaos_mesh_ns}"
+    helm install chaos-mesh chaos-mesh/chaos-mesh -n="${chaos_mesh_ns}" --set chaosDaemon.runtime=containerd --set chaosDaemon.socketPath=/run/containerd/containerd.sock --version 2.6.3
+    sleep 10
+
+    # check chaos-mesh pod status
+    check_chaos_mesh_pods_status() {
+      pods_status=$(kubectl get pods -n ${chaos_mesh_ns} -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}')
+      
+      all_running=true
+      
+      echo "$pods_status" > /tmp/pods_status.txt
+      while read -r pod; do
+        pod_name=$(echo "$pod" | awk '{print $1}')
+        pod_phase=$(echo "$pod" | awk '{print $2}')
+        
+        if [ "$pod_phase" != "Running" ]; then
+          echo "Pod $pod_name is not running (Phase: $pod_phase)"
+          all_running=false
+        fi
+      done < /tmp/pods_status.txt
+      
+      if [ "$all_running" = "true" ]; then
+        return 0
+      else
+        return 1
+      fi
+    }
+
+    let count=0
+    while true; do
+      if check_chaos_mesh_pods_status; then
+        echo "Chaos Mesh Pods are ready" 
+        kubectl get pods -n "${chaos_mesh_ns}"
+        break
+      fi
+
+      if [ $count -gt 240 ]; then
+        echo "Chaos Mesh deployment timeout..."
+        exit 1
+      fi
+
+      echo "Waiting for Chaos Mesh Pods to be ready..."
+      sleep 5
+      let count=${count}+1
+    done
+    
+    # deploy a pod for test ：openchaos-controller
+    # ConfigMap
+    kubectl apply -f /root/chaos-test/openchaos/driver-rocketmq.yaml -n ${env_uuid}
+
+    kubectl apply -f /root/chaos-test/openchaos/chaos-controller.yaml -n ${env_uuid}
+    sleep 10
+    
+    test_pod_name=$(kubectl get pods -n ${env_uuid} -l app=openchaos-controller -o jsonpath='{.items[0].metadata.name}')
+    
+    # check status
+    check_test_pod_status() {
+      pod_status=$(kubectl get pod ${test_pod_name} -n ${env_uuid} --template={{.status.phase}})
+      if [ -z "$pod_status" ]; then
+        pod_status="Pending"
+      fi
+      if [ "${pod_status}" == "Running" ]; then
+        return 0
+      else
+        return 1
+      fi
+    }
+
+    let count=0
+    while true; do
+      if check_test_pod_status; then
+        echo "openchaos-controller Pod is ready"
+        break
+      fi
+
+      if [ $count -gt 240 ]; then
+        echo "openchaos-controller Pod deployment timeout..."
+        exit 1
+      fi
+
+      echo "Waiting for openchaos-controller Pod to be ready..."
+      sleep 5
+      let count=${count}+1
+    done
+    
+    ns=${env_uuid}
+    export ns
+    envsubst < ./chaos-mesh-fault.yaml > ./network-chaos.yaml
+    fault_file="$(pwd)/network-chaos.yaml"
+    # check fault file
+    cat $fault_file
+    # execute the startup script
+    mkdir -p chaos-test-report
+    REPORT_DIR="$(pwd)/chaos-test-report"
+    touch $REPORT_DIR/cron-log.txt
+    cd /chaos-test
+    sh ./start-cron.sh "$fault_file"  30 "$test_pod_name" "$ns" "$REPORT_DIR"
+    cd -
+
+fi
+
+
 if [ ${ACTION} == "clean" ]; then
     echo "************************************"
     echo "*       Delete app and env...      *"
@@ -381,7 +524,7 @@ if [ ${ACTION} == "clean" ]; then
 
     # vela env delete ${DELETE_ENV} -y
     sleep 3
-    # kubectl delete namespace ${chaos_mesh_ns} --wait=false
+    kubectl delete namespace ${chaos_mesh_ns} --wait=false
     kubectl delete namespace ${DELETE_ENV} --wait=false
     kubectl get ns ${DELETE_ENV} -o json | jq '.spec.finalizers=[]' > ns-without-finalizers.json
     cat ns-without-finalizers.json
