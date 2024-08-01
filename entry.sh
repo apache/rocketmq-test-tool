@@ -182,7 +182,7 @@ done
 #       res=`echo $status | grep "Create helm release successfully"`
 #       let count=${count}+1
 #   done
-# fi
+fi
 
 TEST_POD_TEMPLATE='
 apiVersion: v1
