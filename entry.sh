@@ -380,10 +380,10 @@ if [ ${ACTION} == "chaos-test" ]; then
     echo "*         Chaos test...            *"
     echo "************************************"
 
-    # start crond
+    # Start crond
     crond
 
-    # check crond 
+    # Check crond 
     if ps aux | grep '[c]rond' > /dev/null
     then
         echo "crond is running"
@@ -392,13 +392,13 @@ if [ ${ACTION} == "chaos-test" ]; then
         exit 1
     fi
 
-    # deploy chaos-mesh
+    # Deploy chaos-mesh
     helm repo add chaos-mesh https://charts.chaos-mesh.org
     kubectl create ns "${chaos_mesh_ns}"
     helm install chaos-mesh chaos-mesh/chaos-mesh -n="${chaos_mesh_ns}" --set chaosDaemon.runtime=containerd --set chaosDaemon.socketPath=/run/containerd/containerd.sock --version 2.6.3
     sleep 10
 
-    # check chaos-mesh pod status
+    # Check chaos-mesh pod status
     check_chaos_mesh_pods_status() {
       pods_status=$(kubectl get pods -n ${chaos_mesh_ns} -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}')
       
@@ -440,7 +440,7 @@ if [ ${ACTION} == "chaos-test" ]; then
       let count=${count}+1
     done
     
-    # deploy a pod for test ：openchaos-controller
+    # Deploy a pod for test ：openchaos-controller
     # ConfigMap
     kubectl apply -f /chaos-test/openchaos/driver-rocketmq.yaml -n ${env_uuid}
 
@@ -449,7 +449,7 @@ if [ ${ACTION} == "chaos-test" ]; then
     
     test_pod_name=$(kubectl get pods -n ${env_uuid} -l app=openchaos-controller -o jsonpath='{.items[0].metadata.name}')
     
-    # check status
+    # Check status
     check_test_pod_status() {
       pod_status=$(kubectl get pod ${test_pod_name} -n ${env_uuid} --template={{.status.phase}})
       if [ -z "$pod_status" ]; then
@@ -483,14 +483,18 @@ if [ ${ACTION} == "chaos-test" ]; then
     export ns
     envsubst < ./chaos-mesh-fault.yaml > ./network-chaos.yaml
     fault_file="$(pwd)/network-chaos.yaml"
-    # check fault file
+    # Check fault file
     cat $fault_file
-    # execute the startup script
+    # Execute the startup script
     mkdir -p chaos-test-report
     REPORT_DIR="$(pwd)/chaos-test-report"
-    touch $REPORT_DIR/cron-log.txt
+    touch $REPORT_DIR/output.log
+    cron='* * * * *'
+    fault_durition=30 # Get from fault yaml
+    openchaos_args='-t 180'
+    
     cd /chaos-test
-    sh ./start-cron.sh "$fault_file"  30 "$test_pod_name" "$ns" "$REPORT_DIR"
+    sh ./start-cron.sh "$cron" "$fault_file" "$fault_durition" "$test_pod_name" "$ns" "$REPORT_DIR" "$openchaos_args"
     cd -
 
 fi
@@ -524,14 +528,15 @@ if [ ${ACTION} == "clean" ]; then
 
     # vela env delete ${DELETE_ENV} -y
     sleep 3
-    kubectl delete namespace ${chaos_mesh_ns} --wait=false
-    kubectl delete namespace ${DELETE_ENV} --wait=false
-
-    # remove finalizers
+    # Delete namespaces if they exist
     for ns in ${chaos_mesh_ns} ${DELETE_ENV}; do
-        kubectl get ns ${ns} -o json | jq '.spec.finalizers=[]' > ns-without-finalizers.json
-        cat ns-without-finalizers.json
-        curl -X PUT http://localhost:8001/api/v1/namespaces/${ns}/finalize -H "Content-Type: application/json" --data-binary @ns-without-finalizers.json
+        if kubectl get namespace ${ns}; then
+            kubectl delete namespace ${ns} --wait=false
+            # Remove finalizers
+            kubectl get ns ${ns} -o json | jq '.spec.finalizers=[]' > ns-without-finalizers.json
+            cat ns-without-finalizers.json
+            curl -X PUT http://localhost:8001/api/v1/namespaces/${ns}/finalize -H "Content-Type: application/json" --data-binary @ns-without-finalizers.json
+        fi
     done
     
     kill $PID
