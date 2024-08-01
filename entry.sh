@@ -53,6 +53,12 @@ kube_config=$(echo "${ASK_CONFIG}" | base64 -d)
 echo "${kube_config}" > ${HOME}/.kube/config
 export KUBECONFIG="${HOME}/.kube/config"
 
+# install helm
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+helm version
+
 VELA_APP_TEMPLATE='
 apiVersion: core.oam.dev/v1beta1
 kind: Application
@@ -78,6 +84,7 @@ echo -e "${VELA_APP_TEMPLATE}" > ./velaapp.yaml
 sed -i '1d' ./velaapp.yaml
 
 env_uuid=${REPO_NAME}-${GITHUB_RUN_ID}-${JOB_INDEX}
+chaos_mesh_ns="chaos-mesh-${GITHUB_RUN_ID}-${JOB_INDEX}"
 
 
 if [ ${ACTION} == "deploy" ]; then
@@ -87,39 +94,95 @@ if [ ${ACTION} == "deploy" ]; then
 
   echo ${VERSION}: ${env_uuid} deploy start
 
-  vela env init ${env_uuid} --namespace ${env_uuid}
+  # vela env init ${env_uuid} --namespace ${env_uuid}
 
   export VELA_APP_NAME=${env_uuid}
   envsubst < ./velaapp.yaml > velaapp-${REPO_NAME}.yaml
   cat velaapp-${REPO_NAME}.yaml
 
-  vela env set ${env_uuid}
-  vela up -f "velaapp-${REPO_NAME}.yaml"
+  # vela env set ${env_uuid}
+  # vela up -f "velaapp-${REPO_NAME}.yaml"
 
-  app=${env_uuid}
+  # app=${env_uuid}
+  app="rocketmq"
+  kubectl create ns ${env_uuid}
+  helm repo add my_rocketmq  https://chi3316.github.io/my_chart/
+  helm install ${app} -n ${env_uuid} my_rocketmq/rocketmq
+  
+  check_helm_release_status() {
+  status=$(helm status ${app} -n ${env_uuid} | grep "STATUS:" | awk '{print $2}')
+  if [ "${status}" == "deployed" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
 
-  status=`vela status ${app} -n ${app}`
-  echo $status
-  res=`echo $status | grep "Create helm release successfully"`
-  let count=0
-  while [ -z "$res" ]
-  do
-      if [ $count -gt 240 ]; then
-        echo "env ${app} deploy timeout..."
-        exit 1
-      fi
-      echo "waiting for env ${app} ready..."
-      sleep 5
-      status=`vela status ${app} -n ${app}`
-      stopped=`echo $status | grep "not found"`
-      if [ ! -z "$stopped" ]; then
-          echo "env ${app} deploy stopped..."
-          exit 1
-      fi
-      res=`echo $status | grep "Create helm release successfully"`
-      let count=${count}+1
-  done
-fi
+check_pods_status() {
+  pods_status=$(kubectl get pods -n ${env_uuid} -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\t"}{range .status.conditions[?(@.type=="Ready")]}{.status}{"\n"}{end}{end}')
+  
+  all_ready=true
+  
+  echo "$pods_status" > /tmp/pods_status.txt
+  
+  while read -r pod; do
+    pod_name=$(echo "$pod" | awk '{print $1}')
+    pod_phase=$(echo "$pod" | awk '{print $2}')
+    pod_ready=$(echo "$pod" | awk '{print $3}')
+    
+    if [ "$pod_phase" != "Running" ] || [ "$pod_ready" != "True" ]; then
+      echo "Pod $pod_name is not ready (Phase: $pod_phase, Ready: $pod_ready)"
+      all_ready=false
+    fi
+  done < /tmp/pods_status.txt
+  
+  if [ "$all_ready" = "true" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+count=0
+while true; do
+  if check_helm_release_status && check_pods_status; then
+    echo "Helm release and all Pods are ready"
+    kubectl get pods -n ${env_uuid}
+    break
+  fi
+
+  if [ $count -gt 240 ]; then
+    echo "Deployment timeout..."
+    exit 1
+  fi
+
+  echo "Waiting for Helm release and Pods to be ready..."
+  sleep 5
+  count=$((count + 1))
+done
+
+#   status=`vela status ${app} -n ${app}`
+#   echo $status
+#   res=`echo $status | grep "Create helm release successfully"`
+#   let count=0
+#   while [ -z "$res" ]
+#   do
+#       if [ $count -gt 240 ]; then
+#         echo "env ${app} deploy timeout..."
+#         exit 1
+#       fi
+#       echo "waiting for env ${app} ready..."
+#       sleep 5
+#       status=`vela status ${app} -n ${app}`
+#       stopped=`echo $status | grep "not found"`
+#       if [ ! -z "$stopped" ]; then
+#           echo "env ${app} deploy stopped..."
+#           exit 1
+#       fi
+#       res=`echo $status | grep "Create helm release successfully"`
+#       let count=${count}+1
+#   done
+# fi
 
 TEST_POD_TEMPLATE='
 apiVersion: v1
