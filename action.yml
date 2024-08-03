@@ -74,6 +74,24 @@ inputs:
     description: 'helm values'
     required: true
     default: ''
+  openchaos-driver: # id of input
+    description: 'the driver of openchaos'
+    required: true
+    default: ''  
+  chaos-mesh-fault-file: # id of input
+    description: 'the defination file of fault'
+    required: true
+  openchaos-args: 
+    description: 'the startup arguments for openchaos'
+    required: false
+    default: ''
+  fault-scheduler-cron:  # TODO : perhaps other scheduling strategies could be used
+    description: 'scheduling of fault injection using cron during openchaos operation'
+    required: false
+    default: ''
+  fault-durition: 
+    description: 'the duration of a single fault'
+    required: true
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -92,3 +110,8 @@ runs:
     - ${{ inputs.test-cmd }}
     - ${{ inputs.job-id }}
     - ${{ inputs.helm-values }}
+    - ${{ inputs.openchaos-driver }}
+    - ${{ inputs.chaos-mesh-fault-file }}
+    - ${{ inputs.openchaos-args }}
+    - ${{ inputs.fault-scheduler-cron }}
+    - ${{ inputs.fault-durition }}

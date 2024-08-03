@@ -26,7 +26,7 @@ trap cleanup EXIT
 echo "Running chaos test..."
 
 # Start openchaos
-kubectl exec -i ${POD_NAME} -n ${NS} -c openchaos-controller -- /bin/sh -c "./start-openchaos.sh --driver driver-rocketmq/rocketmq.yaml -u rocketmq --output-dir ./report $OPENCHAOS_ARGS" > "$REPORT_DIR/output.log" 2>&1 &
+kubectl exec -i ${POD_NAME} -n ${NS} -c openchaos-controller -- /bin/sh -c "./start-openchaos.sh --driver driver-rocketmq/openchaos-driver.yaml --output-dir ./report $OPENCHAOS_ARGS" > "$REPORT_DIR/output.log" 2>&1 &
 
 # Start cron scheduler , the script path must use absolute path
 ./cron-scheduler.sh "$CRON" /chaos-test/inject_fault_cron.sh  "$CHAOSMESH_YAML_FILE" "$LOG_FILE" "$LIMIT_TIME" "$POD_NAME" "$NS"

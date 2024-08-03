@@ -30,6 +30,11 @@ TEST_CODE_PATH=${11}
 TEST_CMD_BASE=${12}
 JOB_INDEX=${13}
 HELM_VALUES=${14}
+OPENCHAOS_DRIVER=${15}
+CHAOSMESH_YAML_FILE=${16}
+OPENCHAOS_ARGS=${17}
+FAULT_SCHEDULER_CRON=${18}
+FAULT_DURITION=${19}
 
 export VERSION
 export CHART_GIT
@@ -105,11 +110,11 @@ if [ ${ACTION} == "deploy" ]; then
   # vela env set ${env_uuid}
   # vela up -f "velaapp-${REPO_NAME}.yaml"
 
-  # app=${env_uuid}
-  app="rocketmq"
+  app=${env_uuid}
   kubectl create ns ${env_uuid}
-  helm repo add my_rocketmq  https://chi3316.github.io/my_chart/
-  helm install ${app} -n ${env_uuid} my_rocketmq/rocketmq
+  helm repo add my_rocketmq https://chi3316.github.io/my_chart/
+  helm repo update
+  helm install ${app} -n ${env_uuid} my_rocketmq/rocketmq --version 0.0.3
   
   check_helm_release_status() {
   status=$(helm status ${app} -n ${env_uuid} | grep "STATUS:" | awk '{print $2}')
@@ -353,28 +358,6 @@ if [ ${ACTION} == "test_local" ]; then
   exit ${exit_code}
 fi
 
-CHAOS_MESH_FAULT_TEMPLATE='
-apiVersion: chaos-mesh.org/v1alpha1
-kind: NetworkChaos
-metadata:
-  name: network-delay
-spec:
-  action: delay
-  mode: one
-  selector:
-    namespaces:
-      - ${ns}
-    labelSelectors:
-      "app.kubernetes.io/name": "broker"
-      "app.kubernetes.io/instance": "rocketmq"
-  delay:
-    latency: "100ms"
-  duration: "30s"
-'
-
-echo -e "${CHAOS_MESH_FAULT_TEMPLATE}" > ./chaos-mesh-fault.yaml
-sed -i '1d' ./chaos-mesh-fault.yaml
-
 if [ ${ACTION} == "chaos-test" ]; then
     echo "************************************"
     echo "*         Chaos test...            *"
@@ -442,16 +425,30 @@ if [ ${ACTION} == "chaos-test" ]; then
     
     # Deploy a pod for test ：openchaos-controller
     # ConfigMap
-    kubectl apply -f /chaos-test/openchaos/driver-rocketmq.yaml -n ${env_uuid}
+    openchaos_driver_file=$(cat "$OPENCHAOS_DRIVER")
+    echo -e "$openchaos_driver_file" > ./openchaos-driver-template.yaml
 
-    kubectl apply -f /chaos-test/openchaos/chaos-controller.yaml -n ${env_uuid}
-    sleep 10
+    ns=${env_uuid}
+    app=${env_uuid}
+
+    export app
+    export ns
+
+    envsubst < ./openchaos-driver-template.yaml > ./openchaos-driver.yaml
+    kubectl create configmap ${app}-configmap --from-file=openchaos-driver.yaml --namespace=${env_uuid} -o yaml --dry-run=client >  ${app}-configmap.yaml
+    cat ./${app}-configmap.yaml
     
+    configmap_name="${app}-configmap"
+    export configmap_name
+    envsubst < /chaos-test/openchaos/chaos-controller-template.yaml > ./chaos-controller.yaml
+
+    kubectl apply -f ./chaos-controller.yaml -n ${env_uuid}
+    sleep 10
     test_pod_name=$(kubectl get pods -n ${env_uuid} -l app=openchaos-controller -o jsonpath='{.items[0].metadata.name}')
     
     # Check status
     check_test_pod_status() {
-      pod_status=$(kubectl get pod ${test_pod_name} -n ${env_uuid} --template={{.status.phase}})
+      pod_status=$(kubectl get pod ${test_pod_name} -n ${env_uuid} -o jsonpath='{.status.phase}')
       if [ -z "$pod_status" ]; then
         pod_status="Pending"
       fi
@@ -462,7 +459,7 @@ if [ ${ACTION} == "chaos-test" ]; then
       fi
     }
 
-    let count=0
+    count=0
     while true; do
       if check_test_pod_status; then
         echo "openchaos-controller Pod is ready"
@@ -476,11 +473,12 @@ if [ ${ACTION} == "chaos-test" ]; then
 
       echo "Waiting for openchaos-controller Pod to be ready..."
       sleep 5
-      let count=${count}+1
+      count=$((count + 1))
     done
     
-    ns=${env_uuid}
-    export ns
+   
+    chaosmesh_yaml_template=$(cat "$CHAOSMESH_YAML_FILE")
+    echo -e "${chaosmesh_yaml_template}" > ./chaos-mesh-fault.yaml
     envsubst < ./chaos-mesh-fault.yaml > ./network-chaos.yaml
     fault_file="$(pwd)/network-chaos.yaml"
     # Check fault file
@@ -489,12 +487,9 @@ if [ ${ACTION} == "chaos-test" ]; then
     mkdir -p chaos-test-report
     REPORT_DIR="$(pwd)/chaos-test-report"
     touch $REPORT_DIR/output.log
-    cron='* * * * *'
-    fault_durition=30 # Get from fault yaml
-    openchaos_args='-t 180'
     
     cd /chaos-test
-    sh ./start-cron.sh "$cron" "$fault_file" "$fault_durition" "$test_pod_name" "$ns" "$REPORT_DIR" "$openchaos_args"
+    sh ./start-cron.sh "$FAULT_SCHEDULER_CRON" "$fault_file" "$FAULT_DURITION" "$test_pod_name" "$ns" "$REPORT_DIR" "$OPENCHAOS_ARGS"
     cd -
 
 fi
@@ -506,19 +501,27 @@ if [ ${ACTION} == "clean" ]; then
     echo "************************************"
 
     env=${env_uuid}
-
-    # TODO : the name of release should be a variable
-    helm uninstall rocketmq -n ${env}
-    helm uninstall chaos-mesh -n ${chaos_mesh_ns}
+    app=${env_uuid}
 
     # vela delete ${env} -n ${env} -y
-    all_pod_name=`kubectl get pods --no-headers -o custom-columns=":metadata.name" -n ${env}`
-    for pod in $all_pod_name;
-    do
-      kubectl delete pod ${pod} -n ${env}
-    done
+    
+    helm uninstall ${app} -n ${env}
+    helm uninstall chaos-mesh -n ${chaos_mesh_ns}
 
-    sleep 30
+    delete_pods_in_namespace() {
+      local namespace=$1
+      all_pod_name=$(kubectl get pods --no-headers -o custom-columns=":metadata.name" -n ${namespace})
+      for pod in ${all_pod_name}; do
+          kubectl delete pod ${pod} -n ${namespace} --grace-period=30 --wait=true
+      done
+      kubectl wait --for=delete pod --all -n ${namespace} --timeout=60s
+    }
+
+    for ns in ${chaos_mesh_ns} ${env}; do
+        if kubectl get pods -n ${ns}; then
+            delete_pods_in_namespace ${ns}
+        fi
+    done
 
     kubectl proxy &
     PID=$!
