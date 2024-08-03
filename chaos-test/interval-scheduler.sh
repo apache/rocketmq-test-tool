@@ -44,7 +44,7 @@ while [ $fault_inject_time -lt $fault_total_time ]; do
   sleep $DURATION
 
   # Waiting for the next fault injection
-  sleep $interval
+  sleep $INTERVAL
 
   fault_inject_time=$((fault_inject_time + INTERVAL + DURATION))
 done
