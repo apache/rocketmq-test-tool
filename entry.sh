@@ -94,6 +94,55 @@ env_uuid=${REPO_NAME}-${GITHUB_RUN_ID}-${JOB_INDEX}
 chaos_mesh_ns="chaos-mesh-${GITHUB_RUN_ID}-${JOB_INDEX}"
 
 
+check_pods_status() {
+  local namespace=$1
+
+  pods_status=$(kubectl get pods -n ${namespace} -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\t"}{range .status.conditions[?(@.type=="Ready")]}{.status}{"\n"}{end}{end}')
+  all_ready=true
+
+  echo "$pods_status" > /tmp/pods_status.txt
+
+  while read -r pod; do
+    pod_name=$(echo "$pod" | awk '{print $1}')
+    pod_phase=$(echo "$pod" | awk '{print $2}')
+    pod_ready=$(echo "$pod" | awk '{print $3}')
+
+    if [ "$pod_phase" != "Running" ] || [ "$pod_ready" != "True" ]; then
+      echo "Pod $pod_name is not ready (Phase: $pod_phase, Ready: $pod_ready)"
+      all_ready=false
+    fi
+  done < /tmp/pods_status.txt
+
+  if [ "$all_ready" = "true" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+wait_for_pods_ready() {
+  local namespace=$1
+  local timeout=$2
+  local count=0
+
+  while true; do
+    if check_pods_status ${namespace}; then
+      echo "All Pods are ready"
+      kubectl get pods -n "${namespace}"
+      break
+    fi
+
+    if [ $count -gt $timeout ]; then
+      echo "Deployment timeout..."
+      exit 1
+    fi
+
+    echo "Waiting for Pods to be ready..."
+    sleep 5
+    count=$((count + 1))
+  done
+}
+
 if [ ${ACTION} == "deploy" ]; then
   echo "************************************"
   echo "*     Create env and deploy...     *"
@@ -125,34 +174,9 @@ if [ ${ACTION} == "deploy" ]; then
   fi
 }
 
-check_pods_status() {
-  pods_status=$(kubectl get pods -n ${env_uuid} -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\t"}{range .status.conditions[?(@.type=="Ready")]}{.status}{"\n"}{end}{end}')
-  
-  all_ready=true
-  
-  echo "$pods_status" > /tmp/pods_status.txt
-  
-  while read -r pod; do
-    pod_name=$(echo "$pod" | awk '{print $1}')
-    pod_phase=$(echo "$pod" | awk '{print $2}')
-    pod_ready=$(echo "$pod" | awk '{print $3}')
-    
-    if [ "$pod_phase" != "Running" ] || [ "$pod_ready" != "True" ]; then
-      echo "Pod $pod_name is not ready (Phase: $pod_phase, Ready: $pod_ready)"
-      all_ready=false
-    fi
-  done < /tmp/pods_status.txt
-  
-  if [ "$all_ready" = "true" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
 count=0
 while true; do
-  if check_helm_release_status && check_pods_status; then
+  if check_helm_release_status && check_pods_status ${env_uuid}; then
     echo "Helm release and all Pods are ready"
     kubectl get pods -n ${env_uuid}
     break
@@ -382,46 +406,7 @@ if [ ${ACTION} == "chaos-test" ]; then
     sleep 10
 
     # Check chaos-mesh pod status
-    check_chaos_mesh_pods_status() {
-      pods_status=$(kubectl get pods -n ${chaos_mesh_ns} -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}')
-      
-      all_running=true
-      
-      echo "$pods_status" > /tmp/pods_status.txt
-      while read -r pod; do
-        pod_name=$(echo "$pod" | awk '{print $1}')
-        pod_phase=$(echo "$pod" | awk '{print $2}')
-        
-        if [ "$pod_phase" != "Running" ]; then
-          echo "Pod $pod_name is not running (Phase: $pod_phase)"
-          all_running=false
-        fi
-      done < /tmp/pods_status.txt
-      
-      if [ "$all_running" = "true" ]; then
-        return 0
-      else
-        return 1
-      fi
-    }
-
-    let count=0
-    while true; do
-      if check_chaos_mesh_pods_status; then
-        echo "Chaos Mesh Pods are ready" 
-        kubectl get pods -n "${chaos_mesh_ns}"
-        break
-      fi
-
-      if [ $count -gt 240 ]; then
-        echo "Chaos Mesh deployment timeout..."
-        exit 1
-      fi
-
-      echo "Waiting for Chaos Mesh Pods to be ready..."
-      sleep 5
-      let count=${count}+1
-    done
+    wait_for_pods_ready ${chaos_mesh_ns} 240
     
     # Deploy a pod for test ：openchaos-controller
     # ConfigMap
@@ -446,36 +431,7 @@ if [ ${ACTION} == "chaos-test" ]; then
     sleep 10
     test_pod_name=$(kubectl get pods -n ${env_uuid} -l app=openchaos-controller -o jsonpath='{.items[0].metadata.name}')
     
-    # Check status
-    check_test_pod_status() {
-      pod_status=$(kubectl get pod ${test_pod_name} -n ${env_uuid} -o jsonpath='{.status.phase}')
-      if [ -z "$pod_status" ]; then
-        pod_status="Pending"
-      fi
-      if [ "${pod_status}" == "Running" ]; then
-        return 0
-      else
-        return 1
-      fi
-    }
-
-    count=0
-    while true; do
-      if check_test_pod_status; then
-        echo "openchaos-controller Pod is ready"
-        break
-      fi
-
-      if [ $count -gt 240 ]; then
-        echo "openchaos-controller Pod deployment timeout..."
-        exit 1
-      fi
-
-      echo "Waiting for openchaos-controller Pod to be ready..."
-      sleep 5
-      count=$((count + 1))
-    done
-    
+    wait_for_pods_ready ${env_uuid} 240
    
     chaosmesh_yaml_template=$(cat "$CHAOSMESH_YAML_FILE")
     echo -e "${chaosmesh_yaml_template}" > ./chaos-mesh-fault.yaml
