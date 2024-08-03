@@ -31,22 +31,17 @@ log_fault_event() {
 }
 
 inject_fault() {
-  echo "injecting fault..."
-  log_fault_event "start" "chaos-mesh-fault"
   if $KUBECTL_PATH apply -f $CHAOSMESH_YAML_FILE; then
-    echo "Fault injected successfully"
+    log_fault_event "start" "chaos-mesh-fault"
   else
-    echo "Failed to inject fault"
     log_fault_event "error" "chaos-mesh-fault"
   fi
 }
 
 clear_fault() {
-  echo "cleaning fault..."
   if $KUBECTL_PATH delete -f $CHAOSMESH_YAML_FILE; then
     log_fault_event "end" "chaos-mesh-fault"
   else
-    echo "Failed to clear fault"
     log_fault_event "error_clear" "chaos-mesh-fault"
   fi
 }
