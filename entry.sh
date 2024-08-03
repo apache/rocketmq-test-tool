@@ -422,6 +422,7 @@ if [ ${ACTION} == "chaos-test" ]; then
     envsubst < ./openchaos-driver-template.yaml > ./openchaos-driver.yaml
     kubectl create configmap ${app}-configmap --from-file=openchaos-driver.yaml --namespace=${env_uuid} -o yaml --dry-run=client >  ${app}-configmap.yaml
     cat ./${app}-configmap.yaml
+    kubectl apply -f ./${app}-configmap.yaml -n ${env_uuid}
     
     configmap_name="${app}-configmap"
     export configmap_name
@@ -474,9 +475,13 @@ if [ ${ACTION} == "clean" ]; then
     }
 
     for ns in ${chaos_mesh_ns} ${env}; do
-        if kubectl get pods -n ${ns}; then
-            delete_pods_in_namespace ${ns}
-        fi
+      pod_count=$(kubectl get pods -n ${ns} --no-headers | wc -l)
+      if [ "$pod_count" -gt 0 ]; then
+        echo "Pods exist in namespace ${ns}, deleting..."
+        delete_pods_in_namespace ${ns}
+      else
+        echo "No pods found in namespace ${ns}"
+      fi
     done
 
     kubectl proxy &
