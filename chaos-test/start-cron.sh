@@ -37,13 +37,13 @@ fi
 kubectl exec -i ${POD_NAME} -n ${NS} -c openchaos-controller -- /bin/sh -c "./start-openchaos.sh --driver driver-rocketmq/openchaos-driver.yaml --output-dir ./report $OPENCHAOS_ARGS" > "$REPORT_DIR/output.log" 2>&1 &
 OPENCHAOS_PID=$!
 
-if [ -n "$CRON" ]; then
+if [ -n "$CRON" ] && [ "$CRON" != "" ]; then
 # Start cron scheduler , the script path must use absolute path
-  ./cron-scheduler.sh "$CRON" /chaos-test/inject_fault_cron.sh  "$CHAOSMESH_YAML_FILE" "$LOG_FILE" "$DURITION" "$POD_NAME" "$NS"
-elif [ -n "$INTERVAL" ] && [ -n "$DURATION" ]; then
-  ./interval-scheduler.sh $total_time $INTERVAL $DURITION /chaos-test/inject_fault_cron.sh  "$CHAOSMESH_YAML_FILE" "$LOG_FILE" "$DURITION" "$POD_NAME" "$NS"
+  ./cron-scheduler.sh "$CRON" /chaos-test/inject-fault.sh  "$CHAOSMESH_YAML_FILE" "$LOG_FILE" "$DURITION" "$POD_NAME" "$NS"
+elif [ -n "$INTERVAL" ] && [ "$INTERVAL" != "" ] && [ -n "$DURITION" ]; then
+  ./interval-scheduler.sh $total_time $INTERVAL $DURITION /chaos-test/inject-fault.sh  "$CHAOSMESH_YAML_FILE" "$LOG_FILE" "$DURITION" "$POD_NAME" "$NS"
 else
-  echo "Error: Either CRON or INTERVAL must be provided."
+  echo "Error: Either CRON or INTERVAL must be provided, but not both."
   exit 1
 fi
 

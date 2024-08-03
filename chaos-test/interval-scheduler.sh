@@ -1,7 +1,7 @@
 #!/bin/sh
-total_time=$1
-interval=$2
-duration=$3
+TOTAL_TIME=$1
+INTERVAL=$2
+DURATION=$3
 SCRIPT_PATH="$4"
 shift 4
 SCRIPT_ARGS="$@"
@@ -30,21 +30,21 @@ calculate_initial_wait_time() {
 
 }
 
-initial_wait_time=$(calculate_initial_wait_time $total_time $interval $duration)
+initial_wait_time=$(calculate_initial_wait_time $TOTAL_TIME $INTERVAL $DURATION)
 sleep $initial_wait_time
 
 fault_inject_time=0
-fault_total_time=$((total_time - initial_wait_time))
+fault_total_time=$((TOTAL_TIME - initial_wait_time))
 while [ $fault_inject_time -lt $fault_total_time ]; do
 
-  # 执行故障注入操作
-  sh $SCRIPT_PATH $SCRIPT_ARGS
+  # Inject fault
+  nohup sh $SCRIPT_PATH $SCRIPT_ARGS > /dev/null 2>&1 &
 
-  # 等待故障注入操作完成
-  sleep $duration
+  # Wait for the fault injection operation to complete
+  sleep $DURATION
 
-  # 等待下一次故障注入
+  # Waiting for the next fault injection
   sleep $interval
 
-  fault_inject_time=$((fault_inject_time + interval + duration))
+  fault_inject_time=$((fault_inject_time + INTERVAL + DURATION))
 done

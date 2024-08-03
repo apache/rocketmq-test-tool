@@ -85,13 +85,17 @@ inputs:
     description: 'the startup arguments for openchaos'
     required: false
     default: ''
-  fault-scheduler-cron:  # TODO : perhaps other scheduling strategies could be used
+  fault-scheduler-cron:  # using cron or interval to perform continuous injection 
     description: 'scheduling of fault injection using cron during openchaos operation'
     required: false
     default: ''
   fault-durition: 
     description: 'the duration of a single fault'
     required: true
+  fault-scheduler-interval: 
+    description: 'time interval for injecting faults'
+    required: false
+    default: ''
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -115,3 +119,4 @@ runs:
     - ${{ inputs.openchaos-args }}
     - ${{ inputs.fault-scheduler-cron }}
     - ${{ inputs.fault-durition }}
+    - ${{ inputs.fault-scheduler-interval }}

@@ -35,6 +35,7 @@ CHAOSMESH_YAML_FILE=${16}
 OPENCHAOS_ARGS=${17}
 FAULT_SCHEDULER_CRON=${18}
 FAULT_DURITION=${19}
+FAULT_SCHEDULER_INTERVAL=${20}
 
 export VERSION
 export CHART_GIT
@@ -446,7 +447,7 @@ if [ ${ACTION} == "chaos-test" ]; then
     touch $REPORT_DIR/output.log
     
     cd /chaos-test
-    sh ./start-cron.sh "$FAULT_SCHEDULER_CRON" "$fault_file" "$FAULT_DURITION" "$test_pod_name" "$ns" "$REPORT_DIR" "$OPENCHAOS_ARGS"
+    sh ./start-cron.sh "$CRON" "$fault_file" "$FAULT_DURITION" "$test_pod_name" "$ns" "$REPORT_DIR" "$OPENCHAOS_ARGS" "$FAULT_SCHEDULER_INTERVAL"
     cd -
 
 fi
