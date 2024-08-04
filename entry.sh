@@ -39,7 +39,7 @@ HELM_CHART_REPO=${20}
 HELM_CHART_VERSION=${21}
 CHART=${22}
 NODE_LABLE=${23}
-META_NODE_LABLE={$24}
+META_NODE_LABLE=${24}
 
 export VERSION
 export CHART_GIT
@@ -407,7 +407,7 @@ if [ ${ACTION} == "chaos-test" ]; then
     echo -e "$openchaos_driver_file" > ./openchaos-driver-template.yaml
 
     # Replace the placeholders in the configuration file with the ip of the worker node and the metaNode node
-    node_ips=$(kubectl get pods -l "$NODE_LABLE" -o jsonpath='{.items[*].status.podIP}')
+    node_ips=$(kubectl get pods -n ${env_uuid} -l "$NODE_LABLE" -o jsonpath='{.items[*].status.podIP}')
     set -- $node_ips
 
     i=1
@@ -416,7 +416,7 @@ if [ ${ACTION} == "chaos-test" ]; then
       i=$((i + 1))
     done
 
-    meta_node_ips=$(kubectl get pods -l "$META_NODE_LABLE" -o jsonpath='{.items[*].status.podIP}')
+    meta_node_ips=$(kubectl get pods -n ${env_uuid} -l "$META_NODE_LABLE" -o jsonpath='{.items[*].status.podIP}')
     set -- $meta_node_ips 
 
     i=1
