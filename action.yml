@@ -95,6 +95,18 @@ inputs:
   fault-scheduler-interval: 
     description: 'time interval for injecting faults'
     required: false
+    default: '30'
+  helm-chart-repo:
+    description: 'helm chart repo' # TODO : just for test , should use kubevela to deploy application
+    required: true
+    default: ''
+  helm-chart-version:
+    description: 'helm chart version'
+    required: true
+    default: ''
+  helm-chart:
+    description: 'helm chart'
+    required: true
     default: ''
 runs:
   using: 'docker'
@@ -120,3 +132,6 @@ runs:
     - ${{ inputs.fault-scheduler-cron }}
     - ${{ inputs.fault-durition }}
     - ${{ inputs.fault-scheduler-interval }}
+    - ${{ inputs.helm-chart-repo }}
+    - ${{ inputs.helm-chart-version }}
+    - ${{ inputs.helm-chart }}

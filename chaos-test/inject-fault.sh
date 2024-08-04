@@ -1,6 +1,6 @@
 #!/bin/sh
-CHAOSMESH_YAML_FILE=$1  # e.g., "/path/to/chaos_experiment.yaml"
-LOG_FILE=$2  # e.g., "/path/to/chaos_mesh_log.txt"
+CHAOSMESH_YAML_FILE=$1  
+LOG_FILE=$2  
 DURITION=$3 
 POD_NAME=$4
 NS=$5

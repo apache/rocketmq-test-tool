@@ -36,6 +36,9 @@ OPENCHAOS_ARGS=${17}
 FAULT_SCHEDULER_CRON=${18}
 FAULT_DURITION=${19}
 FAULT_SCHEDULER_INTERVAL=${20}
+HELM_CHART_REPO=${21}
+HELM_CHART_VERSION=${22}
+CHART=${23}
 
 export VERSION
 export CHART_GIT
@@ -162,9 +165,9 @@ if [ ${ACTION} == "deploy" ]; then
 
   app=${env_uuid}
   kubectl create ns ${env_uuid}
-  helm repo add my_rocketmq https://chi3316.github.io/my_chart/
+  helm repo add my_rocketmq ${HELM_CHART_REPO}
   helm repo update
-  helm install ${app} -n ${env_uuid} my_rocketmq/rocketmq --version 0.0.3
+  helm install ${app} -n ${env_uuid} my_rocketmq/${CHART} --version ${HELM_CHART_VERSION}
   
   check_helm_release_status() {
   status=$(helm status ${app} -n ${env_uuid} | grep "STATUS:" | awk '{print $2}')
@@ -447,9 +450,10 @@ if [ ${ACTION} == "chaos-test" ]; then
     touch $REPORT_DIR/output.log
     
     cd /chaos-test
-    sh ./start-cron.sh "$CRON" "$fault_file" "$FAULT_DURITION" "$test_pod_name" "$ns" "$REPORT_DIR" "$OPENCHAOS_ARGS" "$FAULT_SCHEDULER_INTERVAL"
+    sh ./startup.sh "$FAULT_SCHEDULER_CRON" "$fault_file" "$FAULT_DURITION" "$test_pod_name" "$ns" "$REPORT_DIR" "$OPENCHAOS_ARGS" "$FAULT_SCHEDULER_INTERVAL"
+    exit_code=$?
     cd -
-
+    exit ${exit_code}
 fi
 
 
