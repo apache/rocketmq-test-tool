@@ -17,6 +17,8 @@ cleanup() {
   kubectl cp -n ${NS} --container=openchaos-controller ${POD_NAME}:/chaos-framework/report "$REPORT_DIR"
   ls $REPORT_DIR
   kubectl delete deployment openchaos-controller -n ${NS}
+  configmap=$(kubectl get pods -n ${NS} ${POD_NAME} -o jsonpath='{.spec.volumes[*].configMap.name}')
+  kubectl delete cm ${configmap} -n ${NS}
   kubectl delete pod ${POD_NAME} -n ${NS}
   echo "Cleanup completed..."
 }
