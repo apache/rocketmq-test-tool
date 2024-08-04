@@ -85,16 +85,12 @@ inputs:
     description: 'the startup arguments for openchaos'
     required: false
     default: ''
-  fault-scheduler-cron:  # using cron or interval to perform continuous injection 
-    description: 'scheduling of fault injection using cron during openchaos operation'
-    required: false
-    default: ''
   fault-durition: 
     description: 'the duration of a single fault'
     required: true
   fault-scheduler-interval: 
     description: 'time interval for injecting faults'
-    required: false
+    required: ture
     default: '30'
   helm-chart-repo:
     description: 'helm chart repo' # TODO : just for test , should use kubevela to deploy application
@@ -129,7 +125,6 @@ runs:
     - ${{ inputs.openchaos-driver }}
     - ${{ inputs.chaos-mesh-fault-file }}
     - ${{ inputs.openchaos-args }}
-    - ${{ inputs.fault-scheduler-cron }}
     - ${{ inputs.fault-durition }}
     - ${{ inputs.fault-scheduler-interval }}
     - ${{ inputs.helm-chart-repo }}

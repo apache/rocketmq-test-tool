@@ -33,12 +33,11 @@ HELM_VALUES=${14}
 OPENCHAOS_DRIVER=${15}
 CHAOSMESH_YAML_FILE=${16}
 OPENCHAOS_ARGS=${17}
-FAULT_SCHEDULER_CRON=${18}
-FAULT_DURITION=${19}
-FAULT_SCHEDULER_INTERVAL=${20}
-HELM_CHART_REPO=${21}
-HELM_CHART_VERSION=${22}
-CHART=${23}
+FAULT_DURITION=${18}
+FAULT_SCHEDULER_INTERVAL=${19}
+HELM_CHART_REPO=${20}
+HELM_CHART_VERSION=${21}
+CHART=${22}
 
 export VERSION
 export CHART_GIT
@@ -59,7 +58,7 @@ echo "*          Set config...           *"
 echo "************************************"
 mkdir -p ${HOME}/.kube
 # kube_config=$(echo "${ASK_CONFIG}" | base64 -d)
-# for test
+# TODO : use kubevela
 kube_config=$(echo "${ASK_CONFIG}")
 echo "${kube_config}" > ${HOME}/.kube/config
 export KUBECONFIG="${HOME}/.kube/config"
@@ -391,18 +390,6 @@ if [ ${ACTION} == "chaos-test" ]; then
     echo "*         Chaos test...            *"
     echo "************************************"
 
-    # Start crond
-    crond
-
-    # Check crond 
-    if ps aux | grep '[c]rond' > /dev/null
-    then
-        echo "crond is running"
-    else
-        echo "Failed to start crond"
-        exit 1
-    fi
-
     # Deploy chaos-mesh
     helm repo add chaos-mesh https://charts.chaos-mesh.org
     kubectl create ns "${chaos_mesh_ns}"
@@ -450,7 +437,7 @@ if [ ${ACTION} == "chaos-test" ]; then
     touch $REPORT_DIR/output.log
     
     cd /chaos-test
-    sh ./startup.sh "$FAULT_SCHEDULER_CRON" "$fault_file" "$FAULT_DURITION" "$test_pod_name" "$ns" "$REPORT_DIR" "$OPENCHAOS_ARGS" "$FAULT_SCHEDULER_INTERVAL"
+    sh ./startup.sh "$fault_file" "$FAULT_DURITION" "$test_pod_name" "$ns" "$REPORT_DIR" "$OPENCHAOS_ARGS" "$FAULT_SCHEDULER_INTERVAL"
     exit_code=$?
     cd -
     exit ${exit_code}

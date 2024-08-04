@@ -6,6 +6,7 @@ SCRIPT_PATH="$4"
 shift 4
 SCRIPT_ARGS="$@"
 
+export KUBECONFIG=$(printenv KUBECONFIG)
 calculate_initial_wait_time() {
   local total=$1
   local interval=$2
@@ -38,12 +39,12 @@ fault_total_time=$((TOTAL_TIME - initial_wait_time))
 while [ $fault_inject_time -lt $fault_total_time ]; do
 
   # Inject fault
-  nohup sh $SCRIPT_PATH $SCRIPT_ARGS > /dev/null 2>&1 &
+  sh $SCRIPT_PATH $SCRIPT_ARGS > /dev/null 2>&1 &
 
   # Wait for the fault injection operation to complete
   sleep $DURATION
 
-  # Waiting for the next fault injection
+  # Wait for the next fault injection
   sleep $INTERVAL
 
   fault_inject_time=$((fault_inject_time + INTERVAL + DURATION))

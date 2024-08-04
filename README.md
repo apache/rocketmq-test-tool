@@ -65,8 +65,7 @@ KubeVela needs to be installed in Kubernetes before use.
      path: chaos-test-report/
 ```
 **Scheduling Fault Injection：**
-You can schedule fault injection using either fault-scheduler-cron for cron expressions or fault-scheduler-interval for intervals (in seconds). Only one should be used at a time.
-> Note: Do not use both parameters simultaneously.
+You can schedule fault injection using fault-scheduler-interval for intervals (in seconds).Specify this parameter to inject faults at regular intervals.
 
 **Defaults for OpenChaos:**
 ```shell

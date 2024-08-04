@@ -7,13 +7,6 @@ NS=$5
 
 export KUBECTL_PATH=/usr/local/bin/kubectl
 
-
-if [ -z "$CHAOSMESH_YAML_FILE" ] || [ -z "$LOG_FILE" ] || [ -z "$DURITION" ] || [ -z "$POD_NAME" ] || [ -z "$NS" ]; then
-  echo "Usage: $0 <chaos_experiment.yaml> <log_file> <DURITION> <pod_name> <namespace>"
-  exit 1
-fi
-
-
 if [ ! -f "$CHAOSMESH_YAML_FILE" ]; then
   echo "Chaos Mesh YAML file not found: $CHAOSMESH_YAML_FILE"
   exit 1

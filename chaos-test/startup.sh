@@ -1,20 +1,19 @@
 #!/bin/sh
-CRON=$1
-CHAOSMESH_YAML_FILE=$2
-DURITION=$3
-POD_NAME=$4
-NS=$5
-REPORT_DIR=$6
-OPENCHAOS_ARGS=$7
-INTERVAL=$8
+CHAOSMESH_YAML_FILE=$1
+DURITION=$2
+POD_NAME=$3
+NS=$4
+REPORT_DIR=$5
+OPENCHAOS_ARGS=$6
+INTERVAL=$7
 LOG_FILE='/chaos-framework/report/chaos-mesh-fault'
 
 
 cleanup() {
   echo "Test done."
   echo "Performing cleanup..."
-  crontab -r 2> /dev/null
   kubectl cp -n ${NS} --container=openchaos-controller ${POD_NAME}:/chaos-framework/report "$REPORT_DIR"
+  sleep 5
   ls $REPORT_DIR
   kubectl delete deployment openchaos-controller -n ${NS}
   configmap=$(kubectl get pods -n ${NS} ${POD_NAME} -o jsonpath='{.spec.volumes[*].configMap.name}')
@@ -40,6 +39,7 @@ check_report() {
   exactlyOnce=$(grep "exactlyOnce:" "$resulet_file" | awk '{print $2}')
 
   if [ "$lostMessageCount" -eq 0 ] && [ "$atMostOnce" = "true" ] && [ "$atLeastOnce" = "true" ] && [ "$exactlyOnce" = "true" ]; then
+    echo "Test Passed: All conditions met."
     exit 0
   else
     echo "Test failed: Conditions not met."
@@ -74,25 +74,13 @@ fi
 
 # Start openchaos
 kubectl exec -i ${POD_NAME} -n ${NS} -c openchaos-controller -- /bin/sh -c "./start-openchaos.sh --driver driver-rocketmq/openchaos-driver.yaml --output-dir ./report $OPENCHAOS_ARGS" > "$REPORT_DIR/output.log" 2>&1 &
-OPENCHAOS_PID=$!
 
-if [ -n "$CRON" ] && [ "$CRON" != "" ]; then
-# Start cron scheduler , the script path must use absolute path
-  ./cron-scheduler.sh "$CRON" /chaos-test/inject-fault.sh  "$CHAOSMESH_YAML_FILE" "$LOG_FILE" "$DURITION" "$POD_NAME" "$NS"
-elif [ -n "$INTERVAL" ] && [ "$INTERVAL" != "" ] && [ -n "$DURITION" ]; then
+if [ -n "$INTERVAL" ] && [ "$INTERVAL" != "" ] && [ -n "$DURITION" ]; then
 # Use interval scheduler
   ./interval-scheduler.sh $total_time $INTERVAL $DURITION /chaos-test/inject-fault.sh  "$CHAOSMESH_YAML_FILE" "$LOG_FILE" "$DURITION" "$POD_NAME" "$NS"
 else
-  echo "Error: Either CRON or INTERVAL must be provided, but not both."
+  echo "Error: INTERVAL and DURITION must be provided."
   exit 1
-fi
-
-
-OPENCHAOS_EXIT_CODE=$?
-if [ $OPENCHAOS_EXIT_CODE -ne 0 ]; then
-  echo "OpenChaos process failed."
-  echo "Check the error log for details: $REPORT_DIR/error.log"
-  exit $OPENCHAOS_EXIT_CODE
 fi
 
 wait
