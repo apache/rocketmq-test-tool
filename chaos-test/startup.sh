@@ -8,11 +8,10 @@ OPENCHAOS_ARGS=$6
 INTERVAL=$7
 LOG_FILE='/chaos-framework/report/chaos-mesh-fault'
 
-
 cleanup() {
   echo "Test done."
   echo "Performing cleanup..."
-  kubectl cp -n ${NS} --container=openchaos-controller ${POD_NAME}:/chaos-framework/report "$REPORT_DIR"
+  kubectl cp --retries=10 -n ${NS} --container=openchaos-controller ${POD_NAME}:/chaos-framework/report "$REPORT_DIR"
   sleep 5
   ls $REPORT_DIR
   kubectl delete deployment openchaos-controller -n ${NS}

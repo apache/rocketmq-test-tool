@@ -44,7 +44,7 @@ KubeVela needs to be installed in Kubernetes before use.
       name: testlog.txt
       path: testlog.txt
 ```
-## Perform chaos tests in Kubernetes
+## Perform chaos test in Kubernetes
 ```yaml
   - name: Checkout repository
     uses: actions/checkout@v2
@@ -59,22 +59,35 @@ KubeVela needs to be installed in Kubernetes before use.
       fault-scheduler-interval: "30"
       openchaos-args: "-t 240"
       fault-durition: "30"
+      node-lable: "app.kubernetes.io/name=broker"
+      meta-node-lable: "app.kubernetes.io/name=nameserver"
    - uses: actions/upload-artifact@v4
      with:
      name: chaos-test-report
      path: chaos-test-report/
 ```
-**Scheduling Fault Injection：**
+**Scheduling Fault Injection**
 You can schedule fault injection using fault-scheduler-interval for intervals (in seconds).Specify this parameter to inject faults at regular intervals.
 
-**Defaults for OpenChaos:**
-```shell
-./start-openchaos.sh --driver driver-rocketmq/openchaos-driver.yaml --output-dir ./report $OPENCHAOS_ARGS
-```
-> Make sure not to duplicate the parameters in OPENCHAOS_ARGS.
-
 **OpenChaos and Chaos-Mesh Configuration**
-For YAML files, use placeholders like `${app}` and `${ns}` for application names and namespaces.For example, in your YAML files:
+To configure OpenChaos, you'll need to specify the nodes and metaNodes. Ensure that you provide labels that can filter out the regular nodes and metadata nodes correctly based on your cluster's configuration.
+Example Configuration:
+```yaml
+nodes:
+  - ${node_1}
+  - ${node_2}
+  ...
+  - ${node_n}
+
+metaNodes:
+  - ${meta_node_1}
+  - ${meta_node_2}
+  ...
+  - ${meta_node_n}
+```
+> **Important**: You must fill the configuration with the exact format shown above. Use placeholders like `${node_1}`, `${node_2}`, etc., for regular nodes, and `${meta_node_1}`, `${meta_node_2}`, etc., for metadata nodes. Make sure to use underscores `_` in the placeholders.
+
+For chaos-mesh YAML files, use placeholders like `${app}` and `${ns}` for application names and namespaces.For example, in your YAML files:
 ```yaml
 selector:
   namespaces:
@@ -82,6 +95,13 @@ selector:
   labelSelectors:
     "app.kubernetes.io/name": "${app}"
 ```
+**Default Parameters:**
+OpenChaos already has some default parameters:
+```shell
+./start-openchaos.sh --driver driver-rocketmq/openchaos-driver.yaml --output-dir ./report $OPENCHAOS_ARGS
+```
+> Make sure not to duplicate the parameters in OPENCHAOS_ARGS.
+
 ## Clean your app in Kubernetes
 ```yaml
   - uses: apache/rocketmq-test-tool@v1

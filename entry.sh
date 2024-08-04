@@ -38,6 +38,8 @@ FAULT_SCHEDULER_INTERVAL=${19}
 HELM_CHART_REPO=${20}
 HELM_CHART_VERSION=${21}
 CHART=${22}
+NODE_LABLE=${23}
+META_NODE_LABLE={$24}
 
 export VERSION
 export CHART_GIT
@@ -404,13 +406,27 @@ if [ ${ACTION} == "chaos-test" ]; then
     openchaos_driver_file=$(cat "$OPENCHAOS_DRIVER")
     echo -e "$openchaos_driver_file" > ./openchaos-driver-template.yaml
 
-    ns=${env_uuid}
-    app=${env_uuid}
+    # Replace the placeholders in the configuration file with the ip of the worker node and the metaNode node
+    node_ips=$(kubectl get pods -l "$NODE_LABLE" -o jsonpath='{.items[*].status.podIP}')
+    set -- $node_ips
 
-    export app
-    export ns
+    i=1
+    for ip in "$@"; do
+      export node_$i=$ip
+      i=$((i + 1))
+    done
 
+    meta_node_ips=$(kubectl get pods -l "$META_NODE_LABLE" -o jsonpath='{.items[*].status.podIP}')
+    set -- $meta_node_ips 
+
+    i=1
+    for ip in "$@"; do
+      export meta_node_$i=$ip
+      i=$((i + 1))
+    done
     envsubst < ./openchaos-driver-template.yaml > ./openchaos-driver.yaml
+    
+    app=${env_uuid}
     kubectl create configmap ${app}-configmap --from-file=openchaos-driver.yaml --namespace=${env_uuid} -o yaml --dry-run=client >  ${app}-configmap.yaml
     cat ./${app}-configmap.yaml
     kubectl apply -f ./${app}-configmap.yaml -n ${env_uuid}
@@ -427,6 +443,10 @@ if [ ${ACTION} == "chaos-test" ]; then
    
     chaosmesh_yaml_template=$(cat "$CHAOSMESH_YAML_FILE")
     echo -e "${chaosmesh_yaml_template}" > ./chaos-mesh-fault.yaml
+
+    ns=${env_uuid}
+    export app
+    export ns
     envsubst < ./chaos-mesh-fault.yaml > ./network-chaos.yaml
     fault_file="$(pwd)/network-chaos.yaml"
     # Check fault file

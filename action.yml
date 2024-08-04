@@ -104,6 +104,14 @@ inputs:
     description: 'helm chart'
     required: true
     default: ''
+  node-lable:
+    description: 'the cluster node lable,such as app.kubernetes.io/name=broker'
+    required: true
+    default:
+  meta-node-lable:
+    description: 'the meta node lable,such as app.kubernetes.io/name=nameserver'
+    required: true
+    default:
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -130,3 +138,5 @@ runs:
     - ${{ inputs.helm-chart-repo }}
     - ${{ inputs.helm-chart-version }}
     - ${{ inputs.helm-chart }}
+    - ${{ inputs.node-lable }}
+    - ${{ inputs.meta-node-lable }}
