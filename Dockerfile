@@ -15,10 +15,7 @@
 # limitations under the License.
 #
 # Container image that runs your code
-FROM registry.cn-guangzhou.aliyuncs.com/cc-aliyun/test-runner:v0.0.2
-
-RUN mkdir /chaos-test
-COPY ./chaos-test/ /chaos-test
+FROM cloudnativeofalibabacloud/test-runner:v0.0.1
 
 # Copies your code file from your action repository to the filesystem path `/` of the container
 COPY entry.sh /entry.sh

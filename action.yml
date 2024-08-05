@@ -74,44 +74,6 @@ inputs:
     description: 'helm values'
     required: true
     default: ''
-  openchaos-driver: # id of input
-    description: 'the driver of openchaos'
-    required: true
-    default: ''  
-  chaos-mesh-fault-file: # id of input
-    description: 'the defination file of fault'
-    required: true
-  openchaos-args: 
-    description: 'the startup arguments for openchaos'
-    required: false
-    default: ''
-  fault-durition: 
-    description: 'the duration of a single fault'
-    required: true
-  fault-scheduler-interval: 
-    description: 'time interval for injecting faults'
-    required: ture
-    default: '30'
-  helm-chart-repo:
-    description: 'helm chart repo' # TODO : just for test , should use kubevela to deploy application
-    required: true
-    default: ''
-  helm-chart-version:
-    description: 'helm chart version'
-    required: true
-    default: ''
-  helm-chart:
-    description: 'helm chart'
-    required: true
-    default: ''
-  node-lable:
-    description: 'the cluster node lable,such as app.kubernetes.io/name=broker'
-    required: true
-    default:
-  meta-node-lable:
-    description: 'the meta node lable,such as app.kubernetes.io/name=nameserver'
-    required: true
-    default:
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -130,13 +92,3 @@ runs:
     - ${{ inputs.test-cmd }}
     - ${{ inputs.job-id }}
     - ${{ inputs.helm-values }}
-    - ${{ inputs.openchaos-driver }}
-    - ${{ inputs.chaos-mesh-fault-file }}
-    - ${{ inputs.openchaos-args }}
-    - ${{ inputs.fault-durition }}
-    - ${{ inputs.fault-scheduler-interval }}
-    - ${{ inputs.helm-chart-repo }}
-    - ${{ inputs.helm-chart-version }}
-    - ${{ inputs.helm-chart }}
-    - ${{ inputs.node-lable }}
-    - ${{ inputs.meta-node-lable }}
