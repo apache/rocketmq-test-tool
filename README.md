@@ -48,12 +48,15 @@ KubeVela needs to be installed in Kubernetes before use.
 ```yaml
   - name: Checkout repository
     uses: actions/checkout@v2
-  - uses: chi3316/rocketmq-test-tool@2aaa80a004acd0831645852987213dbdff61ce53
+  - uses: chi3316/rocketmq-test-tool@83271804d376329a5df02a23ba74c117b7dcd22a
     name: Chaos test
     with:
       action: "chaos-test"
       ask-config: "${{ secrets.KUBE_CONFIG }}"
       job-id: 1
+      helm-chart-repo: "https://chi3316.github.io/my_chart/"
+      helm-chart-version: "0.0.3"
+      helm-chart: "rocketmq"
       openchaos-driver: ".github/chaos-configs/driver.yaml"
       chaos-mesh-fault-file: ".github/chaos-configs/network-delay.yaml"
       fault-scheduler-interval: "30"
