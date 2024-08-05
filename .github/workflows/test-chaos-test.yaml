@@ -1,0 +1,64 @@
+name: Test chaos-test
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        version: [v2.2]
+    steps:
+      - uses: chi3316/rocketmq-test-tool/chaos-test-runner@a44e9f4e1fdbf05b4fedebd55ed3aef0f7a986df
+        name: Deploy rocketmq
+        with:
+          action: "deploy"
+          ask-config: "${{ secrets.ACK_CONFIG_VIRGINA }}"
+          test-version: "v0.1"
+          job-id: ${{ strategy.job-index }}
+          helm-chart-repo: "https://chi3316.github.io/my_chart/"
+          helm-chart-version: "0.0.3"
+          helm-chart: "rocketmq"
+
+  chaos-test:
+    runs-on: ubuntu-latest
+    needs: deploy
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - uses: chi3316/rocketmq-test-tool/chaos-test-runner@a44e9f4e1fdbf05b4fedebd55ed3aef0f7a986df
+        name: Chaos test
+        with:
+          action: "chaos-test"
+          ask-config: "${{ secrets.ACK_CONFIG_VIRGINA }}"
+          job-id: ${{ strategy.job-index }}
+          openchaos-driver: ".github/chaos-configs/driver.yaml"
+          chaos-mesh-fault-file: ".github/chaos-configs/network-delay.yaml"
+          fault-scheduler-interval: "30"
+          openchaos-args: "-t 240"
+          fault-durition: "30"
+          node-lable: "app.kubernetes.io/name=broker"
+          meta-node-lable: "app.kubernetes.io/name=nameserver"
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-test-report
+          path: chaos-test-report/
+        continue-on-error: true
+  clean:
+    if: always()
+    name: Clean
+    needs: [deploy, chaos-test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: chi3316/rocketmq-test-tool/chaos-test-runner@a44e9f4e1fdbf05b4fedebd55ed3aef0f7a986df
+        name: clean
+        with:
+          action: "clean"
+          ask-config: "${{ secrets.ACK_CONFIG_VIRGINA }}"
+          job-id: ${{ strategy.job-index }}
