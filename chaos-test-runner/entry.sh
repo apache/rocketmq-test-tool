@@ -288,6 +288,7 @@ if [ ${ACTION} == "clean" ]; then
     
     helm uninstall ${app} -n ${env}
     helm uninstall chaos-mesh -n ${chaos_mesh_ns}
+    sleep 10
 
     delete_pods_in_namespace() {
       local namespace=$1

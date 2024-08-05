@@ -45,18 +45,29 @@ KubeVela needs to be installed in Kubernetes before use.
       path: testlog.txt
 ```
 ## Perform chaos test in Kubernetes
+Deploy your application:
+```yaml
+  - uses: chi3316/rocketmq-test-tool/chaos-test-runner@04e9a30b956e3717eda942f5ad7dd7d5e3531092
+    name: Deploy rocketmq
+    with:
+      action: "deploy"
+      ask-config: "${{ secrets.ACK_CONFIG_VIRGINA }}"
+      test-version: "v0.1"
+      job-id: 1
+      helm-chart-repo: "https://chi3316.github.io/my_chart/"
+      helm-chart-version: "0.0.3"
+      helm-chart: "rocketmq"
+```
+Chaos test:
 ```yaml
   - name: Checkout repository
     uses: actions/checkout@v2
-  - uses: chi3316/rocketmq-test-tool@83271804d376329a5df02a23ba74c117b7dcd22a
+  - uses: chi3316/rocketmq-test-tool/chaos-test-runner@04e9a30b956e3717eda942f5ad7dd7d5e3531092
     name: Chaos test
     with:
       action: "chaos-test"
       ask-config: "${{ secrets.KUBE_CONFIG }}"
       job-id: 1
-      helm-chart-repo: "https://chi3316.github.io/my_chart/"
-      helm-chart-version: "0.0.3"
-      helm-chart: "rocketmq"
       openchaos-driver: ".github/chaos-configs/driver.yaml"
       chaos-mesh-fault-file: ".github/chaos-configs/network-delay.yaml"
       fault-scheduler-interval: "30"
@@ -69,6 +80,16 @@ KubeVela needs to be installed in Kubernetes before use.
      name: chaos-test-report
      path: chaos-test-report/
 ```
+Clean work:
+```yaml
+  - uses: chi3316/rocketmq-test-tool/chaos-test-runner@04e9a30b956e3717eda942f5ad7dd7d5e3531092
+    name: clean
+    with:
+      action: "clean"
+      ask-config: "${{ secrets.ACK_CONFIG_VIRGINA }}"
+      job-id: 1
+```
+
 **Scheduling Fault Injection**
 You can schedule fault injection using fault-scheduler-interval for intervals (in seconds).Specify this parameter to inject faults at regular intervals.
 
