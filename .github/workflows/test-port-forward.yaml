@@ -1,0 +1,33 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Start SSH tunnel to jump server
+        run: |
+          nohup ssh -f -N -L 6443:10.0.0.223:6443 root@121.40.58.25 &
+          sleep 5
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.ACK_CONF_INNER }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Test kubectl
+        run: kubectl get nodes
