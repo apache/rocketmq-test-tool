@@ -45,9 +45,17 @@ KubeVela needs to be installed in Kubernetes before use.
       path: testlog.txt
 ```
 ## Perform chaos test in Kubernetes
-Deploy your application:
+**Quick Start:**
+1. On the main branch of your repository, copy the example workflow (the entire ./github/ directory) into your own repository.
+2. Configure a GitHub repository secret:
+   - Go to Settings -> Secrets and variables -> Actions.
+   - Click Repository secrets to create a new secret named - ACK_CONFIG_VIRGINIA.
+   - Set the value to your K8s cluster access token.
+3. Finally, you can manually trigger the workflow called 'Test chaos-test' in the Actions tab to see it in action.
+
+**Deploy your application:**
 ```yaml
-  - uses: chi3316/rocketmq-test-tool/chaos-test-runner@04e9a30b956e3717eda942f5ad7dd7d5e3531092
+  - uses: chi3316/rocketmq-test-tool/chaos-test-runner@1cb6d547b8ae65993a3ed0f03ac6c62ba42cf991
     name: Deploy rocketmq
     with:
       action: "deploy"
@@ -58,11 +66,11 @@ Deploy your application:
       helm-chart-version: "0.0.3"
       helm-chart: "rocketmq"
 ```
-Chaos test:
+**Chaos test:**
 ```yaml
   - name: Checkout repository
     uses: actions/checkout@v2
-  - uses: chi3316/rocketmq-test-tool/chaos-test-runner@04e9a30b956e3717eda942f5ad7dd7d5e3531092
+  - uses: chi3316/rocketmq-test-tool/chaos-test-runner@1cb6d547b8ae65993a3ed0f03ac6c62ba42cf991
     name: Chaos test
     with:
       action: "chaos-test"
@@ -80,9 +88,9 @@ Chaos test:
      name: chaos-test-report
      path: chaos-test-report/
 ```
-Clean work:
+**Clean work:**
 ```yaml
-  - uses: chi3316/rocketmq-test-tool/chaos-test-runner@04e9a30b956e3717eda942f5ad7dd7d5e3531092
+  - uses: chi3316/rocketmq-test-tool/chaos-test-runner@1cb6d547b8ae65993a3ed0f03ac6c62ba42cf991
     name: clean
     with:
       action: "clean"
@@ -119,12 +127,14 @@ selector:
   labelSelectors:
     "app.kubernetes.io/name": "${app}"
 ```
+> **Note**: When installing Chaos Mesh, you might need to adjust settings based on the container runtime of your Kubernetes cluster.
+
 **Default Parameters:**
 OpenChaos already has some default parameters:
 ```shell
 ./start-openchaos.sh --driver driver-rocketmq/openchaos-driver.yaml --output-dir ./report $OPENCHAOS_ARGS
 ```
-> Make sure not to duplicate the parameters in OPENCHAOS_ARGS.
+> **Note**: Make sure not to duplicate the parameters in OPENCHAOS_ARGS.
 
 ## Clean your app in Kubernetes
 ```yaml
