@@ -107,11 +107,19 @@ inputs:
   node-lable:
     description: 'the cluster node lable'
     required: true
-    default:
+    default: ''
   meta-node-lable:
     description: 'the meta node lable'
     required: true
-    default:
+    default: ''
+  runtime: 
+    description: 'the container runtime of K8s'
+    required: false
+    default: ''
+  socket-path: 
+    description: 'the socket path of container runtime'
+    required: false
+    default: ''
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -140,3 +148,5 @@ runs:
     - ${{ inputs.helm-chart }}
     - ${{ inputs.node-lable }}
     - ${{ inputs.meta-node-lable }}
+    - ${{ inputs.runtime }}
+    - ${{ inputs.socket-path }}

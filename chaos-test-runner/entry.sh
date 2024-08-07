@@ -40,6 +40,8 @@ HELM_CHART_VERSION=${21}
 CHART=${22}
 NODE_LABLE=${23}
 META_NODE_LABLE=${24}
+RUNTIME_PARAM=${25}
+SOCKET_PATH_PARAM=${26}
 
 export VERSION
 export CHART_GIT
@@ -207,7 +209,41 @@ if [ ${ACTION} == "chaos-test" ]; then
     # Deploy chaos-mesh
     helm repo add chaos-mesh https://charts.chaos-mesh.org
     kubectl create ns "${chaos_mesh_ns}"
-    helm install chaos-mesh chaos-mesh/chaos-mesh -n="${chaos_mesh_ns}" --set chaosDaemon.runtime=containerd --set chaosDaemon.socketPath=/run/containerd/containerd.sock --version 2.6.3
+    container_runtime=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}')
+    # Default to /var/run/docker.sock
+    runtime="docker"
+    socket_path="/var/run/docker.sock"
+
+    # Set the value according to the runtime
+    if echo "$container_runtime" | grep -q "docker"; then
+      runtime="docker"
+      socket_path="/var/run/docker.sock"
+    elif echo "$container_runtime" | grep -q "containerd"; then
+      runtime="containerd"
+      
+      kubelet_version=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}')
+      if echo "$kubelet_version" | grep -q "k3s"; then
+        socket_path="/run/k3s/containerd/containerd.sock"
+      elif echo "$kubelet_version" | grep -q "microk8s"; then
+        socket_path="/var/snap/microk8s/common/run/containerd.sock"
+      else
+        socket_path="/run/containerd/containerd.sock"
+      fi
+
+    elif echo "$container_runtime" | grep -q "crio"; then
+      runtime="crio"
+      socket_path="/var/run/crio/crio.sock"
+    else
+      if [ -n "$RUNTIME_PARAM" ] && [ "$RUNTIME_PARAM" != "" ] && [ -n "$SOCKET_PATH_PARAM" ] && [ "$SOCKET_PATH_PARAM" != "" ]; then
+        runtime=$RUNTIME_PARAM
+        socket_path=$SOCKET_PATH_PARAM
+      else
+        echo "Error : Unable to detect cri,please manually specify runtime and socket path."
+        exit 1
+      fi
+    fi
+    
+    helm install chaos-mesh chaos-mesh/chaos-mesh --namespace=${chaos_mesh_ns} --set chaosDaemon.runtime=$runtime --set chaosDaemon.socketPath=$socket_path --version 2.6.3
     sleep 10
 
     # Check chaos-mesh pod status
