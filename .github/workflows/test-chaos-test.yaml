@@ -20,7 +20,7 @@ jobs:
           test-version: "v0.1"
           job-id: ${{ strategy.job-index }}
           helm-chart-repo: "https://chi3316.github.io/my_chart/"
-          helm-chart-version: "0.0.3"
+          helm-chart-version: "0.0.5"
           helm-chart: "rocketmq"
 
   chaos-test:
@@ -54,7 +54,7 @@ jobs:
     name: Clean
     needs: [deploy, chaos-test]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: chi3316/rocketmq-test-tool/chaos-test-runner@1cb6d547b8ae65993a3ed0f03ac6c62ba42cf991
         name: clean

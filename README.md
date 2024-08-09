@@ -49,7 +49,7 @@ KubeVela needs to be installed in Kubernetes before use.
 1. On the main branch of your repository, copy the example workflow (the entire ./github/ directory) into your own repository.
 2. Configure a GitHub repository secret:
    - Go to Settings -> Secrets and variables -> Actions.
-   - Click Repository secrets to create a new secret named - ACK_CONFIG_VIRGINIA.
+   - Click Repository secrets to create a new secret named - ACK_CONFIG_VIRGINA.
    - Set the value to your K8s cluster access token.
 3. Finally, you can manually trigger the workflow called 'Test chaos-test' in the Actions tab to see it in action.
 
@@ -63,7 +63,7 @@ KubeVela needs to be installed in Kubernetes before use.
       test-version: "v0.1"
       job-id: 1
       helm-chart-repo: "https://chi3316.github.io/my_chart/"
-      helm-chart-version: "0.0.3"
+      helm-chart-version: "0.0.5"
       helm-chart: "rocketmq"
 ```
 **Chaos test:**
