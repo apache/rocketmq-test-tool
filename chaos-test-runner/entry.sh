@@ -232,7 +232,7 @@ if [ ${ACTION} == "chaos-test" ]; then
       fi
     fi
     
-    helm install chaos-mesh chaos-mesh/chaos-mesh --namespace=${chaos_mesh_ns} --set chaosDaemon.runtime=$runtime --set chaosDaemon.socketPath=$socket_path --version 2.6.3
+    helm install ${chaos_mesh_ns} chaos-mesh/chaos-mesh --namespace=${chaos_mesh_ns} --set chaosDaemon.runtime=$runtime --set chaosDaemon.socketPath=$socket_path --version 2.6.3
     sleep 10
 
     # Check chaos-mesh pod status
@@ -309,29 +309,15 @@ if [ ${ACTION} == "clean" ]; then
     env=${env_uuid}
     app=${env_uuid}
 
+    helm uninstall ${chaos_mesh_ns} -n ${chaos_mesh_ns}
     vela delete ${env} -n ${env} -y
-    
-    helm uninstall chaos-mesh -n ${chaos_mesh_ns}
-    sleep 10
-
-    delete_pods_in_namespace() {
-      local namespace=$1
-      all_pod_name=$(kubectl get pods --no-headers -o custom-columns=":metadata.name" -n ${namespace})
-      for pod in ${all_pod_name}; do
-          kubectl delete pod ${pod} -n ${namespace} --grace-period=30 --wait=true
-      done
-      kubectl wait --for=delete pod --all -n ${namespace} --timeout=60s
-    }
-
-    for ns in ${chaos_mesh_ns} ${env}; do
-      pod_count=$(kubectl get pods -n ${ns} --no-headers | wc -l)
-      if [ "$pod_count" -gt 0 ]; then
-        echo "Pods exist in namespace ${ns}, deleting..."
-        delete_pods_in_namespace ${ns}
-      else
-        echo "No pods found in namespace ${ns}"
-      fi
+    all_pod_name=`kubectl get pods --no-headers -o custom-columns=":metadata.name" -n ${env}`
+    for pod in $all_pod_name;
+    do
+      kubectl delete pod ${pod} -n ${env}
     done
+
+    sleep 30
 
     kubectl proxy &
     PID=$!
