@@ -67,6 +67,12 @@ kube_config=$(echo "${ASK_CONFIG}")
 echo "${kube_config}" > ${HOME}/.kube/config
 export KUBECONFIG="${HOME}/.kube/config"
 
+# Install helm
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+helm version
+
 VELA_APP_TEMPLATE='
 apiVersion: core.oam.dev/v1beta1
 kind: Application
@@ -188,12 +194,6 @@ if [ ${ACTION} == "chaos-test" ]; then
     echo "************************************"
     echo "*         Chaos test...            *"
     echo "************************************"
-
-    # Install helm
-    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-    chmod 700 get_helm.sh
-    ./get_helm.sh
-    helm version
 
     # Deploy chaos-mesh
     helm repo add chaos-mesh https://charts.chaos-mesh.org
