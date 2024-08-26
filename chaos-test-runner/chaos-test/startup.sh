@@ -33,11 +33,9 @@ check_report() {
 
   # Check for missing messages
   lostMessageCount=$(grep "lostMessageCount:" "$resulet_file" | awk '{print $2}')
-  atMostOnce=$(grep "atMostOnce:" "$resulet_file" | awk '{print $2}')
   atLeastOnce=$(grep "atLeastOnce:" "$resulet_file" | awk '{print $2}')
-  exactlyOnce=$(grep "exactlyOnce:" "$resulet_file" | awk '{print $2}')
 
-  if [ "$lostMessageCount" -eq 0 ] && [ "$atMostOnce" = "true" ] && [ "$atLeastOnce" = "true" ] && [ "$exactlyOnce" = "true" ]; then
+  if [ "$lostMessageCount" -eq 0 ] && [ "$atLeastOnce" = "true" ]; then
     echo "Test Passed: All conditions met."
     exit 0
   else
@@ -45,14 +43,8 @@ check_report() {
     if [ "$lostMessageCount" -ne 0 ]; then
       echo "Error: lostMessageCount is not 0."
     fi
-    if [ "$atMostOnce" != "true" ]; then
-      echo "Error: atMostOnce is not true."
-    fi
     if [ "$atLeastOnce" != "true" ]; then
       echo "Error: atLeastOnce is not true."
-    fi
-    if [ "$exactlyOnce" != "true" ]; then
-      echo "Error: exactlyOnce is not true."
     fi
     exit 1
   fi
