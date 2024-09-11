@@ -228,11 +228,9 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
 
   # 处理数据，生成图表
   cd ${report_path}
-  cp /benchmark/producer.py ./producer.py
-  cp /benchmark/consumer.py ./consumer.py 
-  python3 consumer.py
-  python3 producer.py
-  rm -f consumer.py && rm -f producer.py
+  cp /benchmark/log_analysis.py ./log_analysis.py
+  python3 log_analysis.py
+  rm -f log_analysis.py && rm -f *.csv
   ls
   cd -
 fi
