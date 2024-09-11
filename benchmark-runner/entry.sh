@@ -24,13 +24,9 @@ DOCKER_REPO_PASSWORD=$5
 CHART_GIT=$6
 CHART_BRANCH=$7
 CHART_PATH=$8
-TEST_CODE_GIT=${9}
-TEST_CODE_BRANCH=${10}
-TEST_CODE_PATH=${11}
-TEST_CMD_BASE=${12}
-JOB_INDEX=${13}
-HELM_VALUES=${14}
-TEST_TIME=${15}
+JOB_INDEX=${9}
+HELM_VALUES=${10}
+TEST_TIME=${11}
 
 export VERSION
 export CHART_GIT
@@ -39,9 +35,6 @@ export CHART_PATH
 export REPO_NAME=`echo ${GITHUB_REPOSITORY#*/} | sed -e "s/\//-/g" | cut -c1-36 | tr '[A-Z]' '[a-z]'`
 export WORKFLOW_NAME=${GITHUB_WORKFLOW}
 export RUN_ID=${GITHUB_RUN_ID}
-export TEST_CODE_GIT
-export TEST_CODE_BRANCH
-export TEST_CODE_PATH
 export YAML_VALUES=`echo "${HELM_VALUES}" | sed -s 's/^/          /g'`
 
 # 连接rocketmq集群

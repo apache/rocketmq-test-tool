@@ -50,22 +50,6 @@ inputs:
     description: 'chart path'
     required: false
     default: './'
-  test-code-git: # id of input
-    description: 'test code git'
-    required: false
-    default: ''
-  test-code-branch: # id of input
-    description: 'test code branch'
-    required: false
-    default: ''
-  test-code-path: # id of input
-    description: 'test code path'
-    required: false
-    default: ''
-  test-cmd: # id of input
-    description: 'test cmd'
-    required: false
-    default: ''
   job-id: # id of input
     description: 'job id'
     required: true
@@ -90,10 +74,6 @@ runs:
     - ${{ inputs.chart-git }}
     - ${{ inputs.chart-branch }}
     - ${{ inputs.chart-path }}
-    - ${{ inputs.test-code-git }}
-    - ${{ inputs.test-code-branch }}
-    - ${{ inputs.test-code-path }}
-    - ${{ inputs.test-cmd }}
     - ${{ inputs.job-id }}
     - ${{ inputs.helm-values }}
     - ${{ inputs.test-time }}
