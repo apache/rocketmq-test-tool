@@ -238,7 +238,6 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   else
       echo "Consumer benchmark file not found."
   fi
-
   echo "===================================="
   echo "Producer benchmark result: "
   if [ -f ${producer_benchmark} ]; then
@@ -246,7 +245,6 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   else
       echo "Producer benchmark file not found."
   fi
-
   echo "========================================================"
 
   # Producer 阈值
@@ -261,80 +259,50 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   AVG_S2C_RT_MS_THRESHOLD=1.5
   AVG_B2C_RT_MS_THRESHOLD=1.5
 
-  # 从 CSV 文件中获取某个指标的值
   get_csv_value() {
       local file=$1
       local metric=$2
       local column=$3
       awk -F',' -v metric="$metric" -v column="$column" '
-      BEGIN {result = ""} 
-      $1 == metric {result = $column} 
-      END {print result}
+      $1 == metric {print $column; exit}
       ' "$file"
   }
 
-  # 获取 Consumer 相关指标
+  # 获取相关指标
   consume_tps_min=$(get_csv_value "$consumer_benchmark" "Consume TPS" 2)
-  max_s2c_rt=$(get_csv_value "$consumer_benchmark" "Max S2C RT" 2)
-  max_b2c_rt=$(get_csv_value "$consumer_benchmark" "Max B2C RT" 2)
-  avg_s2c_rt=$(get_csv_value "$consumer_benchmark" "Avg S2C RT" 2)
-  avg_b2c_rt=$(get_csv_value "$consumer_benchmark" "Avg B2C RT" 2)
+  max_s2c_rt=$(get_csv_value "$consumer_benchmark" "MAX(S2C) RT (ms)" 2)
+  max_b2c_rt=$(get_csv_value "$consumer_benchmark" "MAX(B2C) RT (ms)" 2)
+  avg_s2c_rt=$(get_csv_value "$consumer_benchmark" "AVG(S2C) RT (ms)" 2)
+  avg_b2c_rt=$(get_csv_value "$consumer_benchmark" "AVG(B2C) RT (ms)" 2)
 
-  # 获取 Producer 相关指标
   send_tps_min=$(get_csv_value "$producer_benchmark" "Send TPS" 2)
-  max_rt=$(get_csv_value "$producer_benchmark" "Max RT" 2)
-  avg_rt=$(get_csv_value "$producer_benchmark" "Avg RT" 2)
+  max_rt=$(get_csv_value "$producer_benchmark" "Max RT (ms)" 2)
+  avg_rt=$(get_csv_value "$producer_benchmark" "Average RT (ms)" 2)
 
   # 校验 Consumer 阈值
-  consumer_tps_pass=false
-  consumer_latency_pass=false
-
-  if (( $(echo "$consume_tps_min >= $MIN_CONSUME_TPS_THRESHOLD" | bc -l) )); then
-      consumer_tps_pass=true
-  fi
-
-  if (( $(echo "$max_s2c_rt <= $MAX_S2C_RT_MS_THRESHOLD" | bc -l) )) && \
-    (( $(echo "$max_b2c_rt <= $MAX_B2C_RT_MS_THRESHOLD" | bc -l) )) && \
-    (( $(echo "$avg_s2c_rt <= $AVG_S2C_RT_MS_THRESHOLD" | bc -l) )) && \
-    (( $(echo "$avg_b2c_rt <= $AVG_B2C_RT_MS_THRESHOLD" | bc -l) )); then
-      consumer_latency_pass=true
-  fi
+  consumer_tps_pass=$(awk -v a="$consume_tps_min" -v b="$MIN_CONSUME_TPS_THRESHOLD" 'BEGIN {print (a >= b) ? "true" : "false"}')
+  consumer_latency_pass=$(awk -v max_s2c="$max_s2c_rt" -v max_b2c="$max_b2c_rt" -v avg_s2c="$avg_s2c_rt" -v avg_b2c="$avg_b2c_rt" \
+      -v max_s2c_thr="$MAX_S2C_RT_MS_THRESHOLD" -v max_b2c_thr="$MAX_B2C_RT_MS_THRESHOLD" -v avg_s2c_thr="$AVG_S2C_RT_MS_THRESHOLD" -v avg_b2c_thr="$AVG_B2C_RT_MS_THRESHOLD" \
+      'BEGIN {print (max_s2c <= max_s2c_thr && max_b2c <= max_b2c_thr && avg_s2c <= avg_s2c_thr && avg_b2c <= avg_b2c_thr) ? "true" : "false"}')
 
   # 校验 Producer 阈值
-  producer_tps_pass=false
-  producer_latency_pass=false
-
-  if (( $(echo "$send_tps_min >= $MIN_SEND_TPS_THRESHOLD" | bc -l) )); then
-      producer_tps_pass=true
-  fi
-
-  if (( $(echo "$max_rt <= $MAX_RT_MS_THRESHOLD" | bc -l) )) && \
-    (( $(echo "$avg_rt <= $AVG_RT_MS_THRESHOLD" | bc -l) )); then
-      producer_latency_pass=true
-  fi
+  producer_tps_pass=$(awk -v a="$send_tps_min" -v b="$MIN_SEND_TPS_THRESHOLD" 'BEGIN {print (a >= b) ? "true" : "false"}')
+  producer_latency_pass=$(awk -v max_rt="$max_rt" -v avg_rt="$avg_rt" -v max_rt_thr="$MAX_RT_MS_THRESHOLD" -v avg_rt_thr="$AVG_RT_MS_THRESHOLD" \
+      'BEGIN {print (max_rt <= max_rt_thr && avg_rt <= avg_rt_thr) ? "true" : "false"}')
 
   # 判断测试结果是否通过
-  if [ "$consumer_tps_pass" = true ] && [ "$consumer_latency_pass" = true ] && \
-    [ "$producer_tps_pass" = true ] && [ "$producer_latency_pass" = true ]; then
+  if [ "$consumer_tps_pass" = "true" ] && [ "$consumer_latency_pass" = "true" ] && \
+    [ "$producer_tps_pass" = "true" ] && [ "$producer_latency_pass" = "true" ]; then
       echo "All benchmarks passed."
       exit 0
   else
       echo "One or more benchmarks failed."
-      if [ "$consumer_tps_pass" = false ]; then
-          echo "Consumer TPS test failed."
-      fi
-      if [ "$consumer_latency_pass" = false ]; then
-          echo "Consumer latency test failed."
-      fi
-      if [ "$producer_tps_pass" = false ]; then
-          echo "Producer TPS test failed."
-      fi
-      if [ "$producer_latency_pass" = false ]; then
-          echo "Producer latency test failed."
-      fi
+      [ "$consumer_tps_pass" = "false" ] && echo "Consumer TPS test failed."
+      [ "$consumer_latency_pass" = "false" ] && echo "Consumer latency test failed."
+      [ "$producer_tps_pass" = "false" ] && echo "Producer TPS test failed."
+      [ "$producer_latency_pass" = "false" ] && echo "Producer latency test failed."
       exit 1
   fi
-
   cd -
 
 fi
