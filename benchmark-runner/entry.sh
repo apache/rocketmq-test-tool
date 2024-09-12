@@ -37,24 +37,10 @@ export WORKFLOW_NAME=${GITHUB_WORKFLOW}
 export RUN_ID=${GITHUB_RUN_ID}
 export YAML_VALUES=`echo "${HELM_VALUES}" | sed -s 's/^/          /g'`
 
-#tmq集群 连接rocke
-# 创建压力机Pod ： consumer和producer
-# 执行压力测试脚本
-# 收集测试数据
-# 与提前设置的阈值作比较，作为ci通过的条件
-
 mkdir -p ${HOME}/.kube
 kube_config=$(echo "${ASK_CONFIG}")
 echo "${kube_config}" > ${HOME}/.kube/config
 export KUBECONFIG="${HOME}/.kube/config"
-
-# 检查集群连接
-echo "Checking Kubernetes cluster connection..."
-kubectl get nodes
-if [ $? -ne 0 ]; then
-  echo "Error: Cannot connect to Kubernetes cluster."
-  exit 1
-fi
 
 env_uuid=${REPO_NAME}-${GITHUB_RUN_ID}-${JOB_INDEX}
 
@@ -140,8 +126,6 @@ spec:
           value: ${namesrv}
         - name: TIMESTAMP
           value: "${timestamp}"
-        - name: TEST_CMD
-          value: ${TEST_CMD}
       args: ["tail -f /dev/null"]
       resources:
         requests:
@@ -158,101 +142,82 @@ spec:
       emptyDir: {}
   restartPolicy: Never
 '
+deploy_pod() {
+    local role=$1
+    local pod_name="${role}-${env_uuid}"
+    local test_cmd=$2
+    
+    echo -e "${CLIENT_POD_TEMPLATE}" > ./${role}_pod.yaml
+    sed -i '1d' ./${role}_pod.yaml
+    export test_pod_name=$pod_name
+
+    envsubst < ./${role}_pod.yaml > ${pod_name}.yaml
+    cat ${pod_name}.yaml
+    sleep 5
+
+    kubectl apply -f ${pod_name}.yaml -n ${ns} --validate=false
+    kubectl wait --for=condition=Ready pod/${pod_name} -n ${ns} --timeout=300s
+    kubectl exec -i ${pod_name} -n ${ns} -- /bin/sh -c "$test_cmd" &
+}
 
 if [ "${ACTION}" = "performance-benchmark" ]; then
-
-  echo -e "${CLIENT_POD_TEMPLATE}" > ./consumer_pod.yaml
-  sed -i '1d' ./consumer_pod.yaml
-
   timestamp=$(date +%Y%m%d_%H%M%S)
   export timestamp
   ns=${env_uuid}
   export ns
-  export test_pod_name="consumer"-${env_uuid}
-  consumer_pod_name=${test_pod_name}
-  namesrv_svc=$(kubectl get svc -n ${ns} | grep nameserver | awk '{print $1}')
-  export namesrv=${namesrv_svc}:9876
+  export namesrv=$(kubectl get svc -n ${ns} | grep nameserver | awk '{print $1}'):9876
 
-  # 定义 Consumer 执行命令
-  TEST_CMD='sh mqadmin updatetopic -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP -c DefaultCluster && cd ../benchmark/ && sh consumer.sh -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP > /mnt/report/consumer_$TIMESTAMP.log 2>&1'
-  export TEST_CMD
-  envsubst < ./consumer_pod.yaml > ${consumer_pod_name}.yaml
-  cat ${consumer_pod_name}.yaml
-  sleep 5
+  # Deploy consumer
+  consumer_cmd='sh mqadmin updatetopic -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP -c DefaultCluster && cd ../benchmark/ && sh consumer.sh -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP > /mnt/report/consumer_$TIMESTAMP.log 2>&1'
+  deploy_pod "consumer" "$consumer_cmd"
 
-  kubectl apply -f ${consumer_pod_name}.yaml -n ${ns} --validate=false
-  kubectl wait --for=condition=Ready pod/${consumer_pod_name} -n ${ns} --timeout=300s
-  kubectl exec -i ${consumer_pod_name} -n ${ns} -- /bin/sh -c "$TEST_CMD" &
-
-  # 部署producer
-  echo -e "${CLIENT_POD_TEMPLATE}" > ./producer_pod.yaml
-  sed -i '1d' ./producer_pod.yaml
-
-  export test_pod_name="producer"-${env_uuid}
-  producer_pod_name=${test_pod_name}
-
-  TEST_CMD='cd ../benchmark/ && sh producer.sh -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP > /mnt/report/producer_$TIMESTAMP.log 2>&1'
-  export TEST_CMD
-  envsubst < ./producer_pod.yaml > ${producer_pod_name}.yaml
-  cat ${producer_pod_name}.yaml
-  sleep 5
-
-  kubectl apply -f ${producer_pod_name}.yaml -n ${ns} --validate=false
-  kubectl wait --for=condition=Ready pod/${producer_pod_name} -n ${ns} --timeout=300s
-  kubectl exec -i ${producer_pod_name} -n ${ns} -- /bin/sh -c "$TEST_CMD" &
+  # Deploy producer
+  producer_cmd='cd ../benchmark/ && sh producer.sh -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP > /mnt/report/producer_$TIMESTAMP.log 2>&1'
+  deploy_pod "producer" "$producer_cmd"
 
   echo "Waiting for benchmark test done..."
   sleep ${TEST_TIME}
 
-  # 停止benchmark测试
+  # Stop benchmark test
+  consumer_pod_name="consumer"-${env_uuid}
+  producer_pod_name="producer"-${env_uuid}
   kubectl exec -i ${consumer_pod_name} -n ${ns} -- /bin/sh -c "sh ../benchmark/shutdown.sh consumer"
   kubectl exec -i ${producer_pod_name} -n ${ns} -- /bin/sh -c "sh ../benchmark/shutdown.sh producer"
 
-  # 收集报告
+  # Collect reports
   path=$(pwd)
   mkdir -p ${path}/benchmark/
-  report_path=${path}/benchmark/
 
-  kubectl cp --retries=10 ${consumer_pod_name}:/mnt/report/ ${report_path} -n ${ns} 
-  kubectl cp --retries=10 ${producer_pod_name}:/mnt/report/ ${report_path} -n ${ns} 
+  kubectl cp --retries=10 ${consumer_pod_name}:/mnt/report/ ${path}/benchmark/ -n ${ns} 
+  kubectl cp --retries=10 ${producer_pod_name}:/mnt/report/ ${path}/benchmark/ -n ${ns} 
   sleep 10
   kubectl delete pod ${consumer_pod_name} -n ${ns}
   kubectl delete pod ${producer_pod_name} -n ${ns}
 
-  # 处理数据，生成图表
-  cd ${report_path}
+  # Process data and generate charts
+  cd ${path}/benchmark/
   cp /benchmark/log_analysis.py ./log_analysis.py
   python3 log_analysis.py
   rm -f log_analysis.py consumer_performance_data.csv producer_performance_data.csv
   ls
 
-  # 判断 CI 是否通过
   consumer_benchmark="consumer_benchmark_result.csv"
   producer_benchmark="producer_benchmark_result.csv"
 
-  # 打印测试结果
+  # Print the benchmark result
   echo "====================benchmark result===================="
   echo "Consumer benchmark result: "
-  if [ -f ${consumer_benchmark} ]; then
-      cat ${consumer_benchmark}
-  else
-      echo "Consumer benchmark file not found."
-  fi
+  cat ${consumer_benchmark} || echo "Consumer benchmark file not found."
   echo "===================================="
   echo "Producer benchmark result: "
-  if [ -f ${producer_benchmark} ]; then
-      cat ${producer_benchmark}
-  else
-      echo "Producer benchmark file not found."
-  fi
+  cat ${producer_benchmark} || echo "Producer benchmark file not found."
   echo "========================================================"
 
-  # Producer 阈值
+  # Benchmark threshold
   MIN_SEND_TPS_THRESHOLD=19000
   MAX_RT_MS_THRESHOLD=700
   AVG_RT_MS_THRESHOLD=4
 
-  # Consumer 阈值
   MIN_CONSUME_TPS_THRESHOLD=19000
   MAX_S2C_RT_MS_THRESHOLD=60
   MAX_B2C_RT_MS_THRESHOLD=60
@@ -268,7 +233,6 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
       ' "$file"
   }
 
-  # 获取相关指标
   consume_tps_min=$(get_csv_value "$consumer_benchmark" "Consume TPS" 2)
   max_s2c_rt=$(get_csv_value "$consumer_benchmark" "MAX(S2C) RT (ms)" 2)
   max_b2c_rt=$(get_csv_value "$consumer_benchmark" "MAX(B2C) RT (ms)" 2)
@@ -279,18 +243,17 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   max_rt=$(get_csv_value "$producer_benchmark" "Max RT (ms)" 2)
   avg_rt=$(get_csv_value "$producer_benchmark" "Average RT (ms)" 2)
 
-  # 校验 Consumer 阈值
+  # Validate the result
   consumer_tps_pass=$(awk -v a="$consume_tps_min" -v b="$MIN_CONSUME_TPS_THRESHOLD" 'BEGIN {print (a >= b) ? "true" : "false"}')
   consumer_latency_pass=$(awk -v max_s2c="$max_s2c_rt" -v max_b2c="$max_b2c_rt" -v avg_s2c="$avg_s2c_rt" -v avg_b2c="$avg_b2c_rt" \
       -v max_s2c_thr="$MAX_S2C_RT_MS_THRESHOLD" -v max_b2c_thr="$MAX_B2C_RT_MS_THRESHOLD" -v avg_s2c_thr="$AVG_S2C_RT_MS_THRESHOLD" -v avg_b2c_thr="$AVG_B2C_RT_MS_THRESHOLD" \
       'BEGIN {print (max_s2c <= max_s2c_thr && max_b2c <= max_b2c_thr && avg_s2c <= avg_s2c_thr && avg_b2c <= avg_b2c_thr) ? "true" : "false"}')
 
-  # 校验 Producer 阈值
   producer_tps_pass=$(awk -v a="$send_tps_min" -v b="$MIN_SEND_TPS_THRESHOLD" 'BEGIN {print (a >= b) ? "true" : "false"}')
   producer_latency_pass=$(awk -v max_rt="$max_rt" -v avg_rt="$avg_rt" -v max_rt_thr="$MAX_RT_MS_THRESHOLD" -v avg_rt_thr="$AVG_RT_MS_THRESHOLD" \
       'BEGIN {print (max_rt <= max_rt_thr && avg_rt <= avg_rt_thr) ? "true" : "false"}')
 
-  # 判断测试结果是否通过
+  # Check if CI passes
   if [ "$consumer_tps_pass" = "true" ] && [ "$consumer_latency_pass" = "true" ] && \
     [ "$producer_tps_pass" = "true" ] && [ "$producer_latency_pass" = "true" ]; then
       echo "All benchmarks passed."
@@ -304,7 +267,6 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
       exit 1
   fi
   cd -
-
 fi
 
 if [ "${ACTION}" = "clean" ]; then
