@@ -223,8 +223,51 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   cd ${report_path}
   cp /benchmark/log_analysis.py ./log_analysis.py
   python3 log_analysis.py
-  rm -f log_analysis.py && rm -f *.csv
+  rm -f log_analysis.py && rm -f consumer_performance_data.csv && rm -f producer_performance_data.csv
   ls
+
+  # 判断 CI 是否通过
+  consumer_benchmark="consumer_benchmark_result.csv"
+  producer_benchmark="producer_benchmark_result.csv"
+
+  MIN_CONSUME_TPS_THRESHOLD=19000
+  MIN_SEND_TPS_THRESHOLD=19000
+
+  get_csv_value() {
+      local file=$1
+      local metric=$2
+      local column=$3
+      awk -F',' -v metric="$metric" -v column="$column" '
+      BEGIN {result = ""}
+      $1 == metric {result = $column}
+      END {print result}
+      ' "$file"
+  }
+
+  consume_tps_min=$(get_csv_value "$consumer_benchmark" "Consume TPS" 2)
+
+  send_tps_min=$(get_csv_value "$producer_benchmark" "Send TPS" 2)
+
+  consumer_tps_pass=false
+  producer_tps_pass=false
+
+  if [ "$consume_tps_min" -ge "$MIN_CONSUME_TPS_THRESHOLD" ]; then
+      consumer_tps_pass=true
+  fi
+
+  if [ "$send_tps_min" -ge "$MIN_SEND_TPS_THRESHOLD" ]; then
+      producer_tps_pass=true
+  fi
+
+
+  if [ "$consumer_tps_pass" = true ] && [ "$producer_tps_pass" = true ]; then
+      echo "All benchmarks passed."
+      exit 0
+  else
+      echo "One or more benchmarks failed."
+      exit 1
+  fi
+
   cd -
 fi
 

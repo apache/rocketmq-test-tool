@@ -17,14 +17,43 @@ output_files = {
     "producer": ("producer_performance_data.csv", "producer_tps_chart.png", "producer_rt_chart.png")
 }
 
-# Check if log file exists
 def check_log_file(log_file):
     if not os.path.exists(log_file):
         print(f"Error: Log file {log_file} does not exist.")
         return False
     return True
 
-# Function to parse log file and filter out the first 30 seconds
+def analyze_data(data, role):
+    def parse_time(time_str):
+        h, m, s = map(int, time_str.split(':'))
+        return h * 3600 + m * 60 + s
+
+    data["Elapsed Time (s)"] = data["Current Time"].apply(parse_time)  # Create elapsed time column
+
+    data = data[data["Elapsed Time (s)"] > 30]
+
+    if role == "producer":
+        metrics = ["Send TPS", "Max RT (ms)", "Average RT (ms)"]
+    else:
+        metrics = ["Consume TPS", "AVG(B2C) RT (ms)", "AVG(S2C) RT (ms)", "MAX(B2C) RT (ms)", "MAX(S2C) RT (ms)"]
+
+    for metric in metrics:
+        data[metric] = pd.to_numeric(data[metric])
+
+    result = {}
+    for metric in metrics:
+        result[metric] = (data[metric].min(), data[metric].max())
+    
+    return result
+
+def write_benchmark_to_file(benchmark_data, role, output_file):
+    with open(output_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Metric", "Min Value", "Max Value"])
+        for metric, (min_value, max_value) in benchmark_data.items():  # Expecting (min, max) tuple
+            writer.writerow([metric, min_value, max_value])
+
+# Parse log file and filter out the first 30 seconds
 def parse_log_file(log_file, pattern, role):
     data = []
     first_timestamp = None
@@ -42,11 +71,12 @@ def parse_log_file(log_file, pattern, role):
 
                     time_only = log_time.split()[1].split(',')[0]
                     log_datetime = datetime.strptime(time_only, "%H:%M:%S")
-                    
+
                     if first_timestamp is None:
                         first_timestamp = log_datetime
                     time_diff = log_datetime - first_timestamp
 
+                    # Skip data from the first 30 seconds
                     if time_diff > timedelta(seconds=30):
                         data.append((time_only, *data_tuple[1:]))
     except FileNotFoundError as e:
@@ -69,6 +99,7 @@ def plot_charts(data, columns, title, ylabel, output_file, x_column='Current Tim
     plt.savefig(output_file)
     print(f"{title} chart saved as {output_file}")
 
+# Process consumer and producer logs
 def process_log(log_role):
     log_file_pattern = f'./{log_role}*.log'
     log_file = glob.glob(log_file_pattern)
@@ -87,31 +118,32 @@ def process_log(log_role):
 
     log_data = parse_log_file(log_file, pattern, log_role)
 
-    # Write data to CSV file
     with open(csv_output_file, mode='w', newline='') as file:
         writer = csv.writer(file)
         if log_role == "consumer":
-            writer.writerow(["Current Time", "Consume TPS", "AVG(B2C) RT (ms)", "AVG(S2C) RT (ms)", "MAX(B2C) RT (ms)", "MAX(S2C) RT (ms)", "Consume Fail", "Source"])
+            writer.writerow(["Current Time", "Consume TPS", "AVG(B2C) RT (ms)", "AVG(S2C) RT (ms)", "MAX(B2C) RT (ms)", "MAX(S2C) RT (ms)", "Consume Fail"])
         else:
-            writer.writerow(["Current Time", "Send TPS", "Max RT (ms)", "Average RT (ms)", "Send Failed", "Response Failed", "Source"])
-        
-        for row in log_data:
-            writer.writerow(list(row) + [log_role.capitalize()])
+            writer.writerow(["Current Time", "Send TPS", "Max RT (ms)", "Average RT (ms)", "Send Failed", "Response Failed"])
+        writer.writerows(log_data)
+    print(f"Data written to {csv_output_file}.")
 
-    print(f"Data successfully written to {csv_output_file}")
+    df = pd.read_csv(csv_output_file)
 
-    data = pd.read_csv(csv_output_file)
-
-    # Plot charts based on role
-    if log_role == "consumer":
-        plot_charts(data[data['Source'] == 'Consumer'], 'Consume TPS', 'Consumer TPS', 'TPS', tps_image_output_file)
-        plot_charts(data[data['Source'] == 'Consumer'], 'AVG(B2C) RT (ms)', 'Consumer AVG(B2C) RT', 'Response Time (ms)', extra_images[0])
-        plot_charts(data[data['Source'] == 'Consumer'], 'AVG(S2C) RT (ms)', 'Consumer AVG(S2C) RT', 'Response Time (ms)', extra_images[1])
-        plot_charts(data[data['Source'] == 'Consumer'], 'MAX(S2C) RT (ms)', 'Consumer MAX(S2C) RT', 'Response Time (ms)', extra_images[2])
-        plot_charts(data[data['Source'] == 'Consumer'], 'MAX(B2C) RT (ms)', 'Consumer MAX(B2C) RT', 'Response Time (ms)', extra_images[3])
+    # Plot TPS and RT charts
+    plot_charts(df, 'Send TPS' if log_role == 'producer' else 'Consume TPS', f"{log_role.capitalize()} TPS", 'TPS', tps_image_output_file)
+    
+    if log_role == "producer":
+        plot_charts(df, 'Average RT (ms)', f"{log_role.capitalize()} Average RT", 'RT (ms)', extra_images[0])
     else:
-        plot_charts(data[data['Source'] == 'Producer'], 'Send TPS', 'Producer TPS', 'TPS', tps_image_output_file)
-        plot_charts(data[data['Source'] == 'Producer'], 'Average RT (ms)', 'Producer Average RT', 'Response Time (ms)', extra_images[0])
+        plot_charts(df, 'AVG(B2C) RT (ms)', f"{log_role.capitalize()} AVG(B2C) RT", 'RT (ms)', extra_images[0])
+        plot_charts(df, 'AVG(S2C) RT (ms)', f"{log_role.capitalize()} AVG(S2C) RT", 'RT (ms)', extra_images[1])
+        plot_charts(df, 'MAX(S2C) RT (ms)', f"{log_role.capitalize()} MAX(S2C) RT", 'RT (ms)', extra_images[2])
+        plot_charts(df, 'MAX(B2C) RT (ms)', f"{log_role.capitalize()} MAX(B2C) RT", 'RT (ms)', extra_images[3])
 
-process_log('consumer')
-process_log('producer')
+    # Analyze and write benchmark results
+    benchmark = analyze_data(df, log_role)
+    write_benchmark_to_file(benchmark, log_role, f"{log_role}_benchmark_result.csv")
+    print(f"Benchmark data written to {log_role}_benchmark_result.csv")
+
+process_log("consumer")
+process_log("producer")
