@@ -159,42 +159,47 @@ spec:
   restartPolicy: Never
 '
 
-deploy_and_run_pod() {
-  local pod_type=$1
-  local pod_template=$2
-  local test_cmd=$3
+if [ "${ACTION}" = "performance-benchmark" ]; then
 
-  echo -e "${pod_template}" > ./${pod_type}_pod.yaml
-  sed -i '1d' ./${pod_type}_pod.yaml
+  echo -e "${CLIENT_POD_TEMPLATE}" > ./consumer_pod.yaml
+  sed -i '1d' ./consumer_pod.yaml
 
   timestamp=$(date +%Y%m%d_%H%M%S)
   export timestamp
   ns=${env_uuid}
   export ns
-  export test_pod_name="${pod_type}-${env_uuid}"
-  pod_name=${test_pod_name}
+  export test_pod_name="consumer"-${env_uuid}
+  consumer_pod_name=${test_pod_name}
   namesrv_svc=$(kubectl get svc -n ${ns} | grep nameserver | awk '{print $1}')
   export namesrv=${namesrv_svc}:9876
 
-  export TEST_CMD="${test_cmd}"
-  envsubst < ./${pod_type}_pod.yaml > ${pod_name}.yaml
-  cat ${pod_name}.yaml
+  # 定义 Consumer 执行命令
+  TEST_CMD='sh mqadmin updatetopic -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP -c DefaultCluster && cd ../benchmark/ && sh consumer.sh -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP > /mnt/report/consumer_$TIMESTAMP.log 2>&1'
+  export TEST_CMD
+  envsubst < ./consumer_pod.yaml > ${consumer_pod_name}.yaml
+  cat ${consumer_pod_name}.yaml
   sleep 5
 
-  kubectl apply -f ${pod_name}.yaml -n ${ns} --validate=false
-  kubectl wait --for=condition=Ready pod/${pod_name} -n ${ns} --timeout=300s
-  kubectl exec -i ${pod_name} -n ${ns} -- /bin/sh -c "$TEST_CMD" &
-}
-
-if [ "${ACTION}" = "performance-benchmark" ]; then
-
-  # 部署consumer Pod
-  consumer_test_cmd='sh mqadmin updatetopic -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP -c DefaultCluster && cd ../benchmark/ && sh consumer.sh -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP > /mnt/report/consumer_$TIMESTAMP.log 2>&1'
-  deploy_and_run_pod "consumer" "${CLIENT_POD_TEMPLATE}" "$consumer_test_cmd"
+  kubectl apply -f ${consumer_pod_name}.yaml -n ${ns} --validate=false
+  kubectl wait --for=condition=Ready pod/${consumer_pod_name} -n ${ns} --timeout=300s
+  kubectl exec -i ${consumer_pod_name} -n ${ns} -- /bin/sh -c "$TEST_CMD" &
 
   # 部署producer
-  producer_test_cmd='cd ../benchmark/ && sh producer.sh -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP > /mnt/report/producer_$TIMESTAMP.log 2>&1'
-  deploy_and_run_pod "producer" "${CLIENT_POD_TEMPLATE}" "$producer_test_cmd"
+  echo -e "${CLIENT_POD_TEMPLATE}" > ./producer_pod.yaml
+  sed -i '1d' ./producer_pod.yaml
+
+  export test_pod_name="producer"-${env_uuid}
+  producer_pod_name=${test_pod_name}
+
+  TEST_CMD='cd ../benchmark/ && sh producer.sh -n $NAMESRV_ADDR -t TestTopic_$TIMESTAMP > /mnt/report/producer_$TIMESTAMP.log 2>&1'
+  export TEST_CMD
+  envsubst < ./producer_pod.yaml > ${producer_pod_name}.yaml
+  cat ${producer_pod_name}.yaml
+  sleep 5
+
+  kubectl apply -f ${producer_pod_name}.yaml -n ${ns} --validate=false
+  kubectl wait --for=condition=Ready pod/${producer_pod_name} -n ${ns} --timeout=300s
+  kubectl exec -i ${producer_pod_name} -n ${ns} -- /bin/sh -c "$TEST_CMD" &
 
   echo "Waiting for benchmark test done..."
   sleep ${TEST_TIME}
@@ -218,7 +223,7 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   cd ${report_path}
   cp /benchmark/log_analysis.py ./log_analysis.py
   python3 log_analysis.py
-  rm -f log_analysis.py consumer_performance_data.csv producer_performance_data.csv
+  rm -f log_analysis.py && rm -f consumer_performance_data.csv && rm -f producer_performance_data.csv
   ls
 
   # 判断 CI 是否通过
