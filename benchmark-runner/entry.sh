@@ -37,7 +37,7 @@ export WORKFLOW_NAME=${GITHUB_WORKFLOW}
 export RUN_ID=${GITHUB_RUN_ID}
 export YAML_VALUES=`echo "${HELM_VALUES}" | sed -s 's/^/          /g'`
 
-# 连接rocketmq集群
+#tmq集群 连接rocke
 # 创建压力机Pod ： consumer和producer
 # 执行压力测试脚本
 # 收集测试数据
@@ -225,45 +225,113 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   consumer_benchmark="consumer_benchmark_result.csv"
   producer_benchmark="producer_benchmark_result.csv"
 
-  MIN_CONSUME_TPS_THRESHOLD=19000
-  MIN_SEND_TPS_THRESHOLD=19000
+  # 打印测试结果
+  echo "====================benchmark result===================="
+  echo "Consumer benchmark result: "
+  if [[ -f ${consumer_benchmark} ]]; then
+      cat ${consumer_benchmark}
+  else
+      echo "Consumer benchmark file not found."
+  fi
 
+  echo "===================================="
+  echo "Producer benchmark result: "
+  if [[ -f ${producer_benchmark} ]]; then
+      cat ${producer_benchmark}
+  else
+      echo "Producer benchmark file not found."
+  fi
+
+  echo "========================================================"
+
+  # Producer 阈值
+  MIN_SEND_TPS_THRESHOLD=19000
+  MAX_RT_MS_THRESHOLD=700
+  AVG_RT_MS_THRESHOLD=4
+
+  # Consumer 阈值
+  MIN_CONSUME_TPS_THRESHOLD=19000
+  MAX_S2C_RT_MS_THRESHOLD=60
+  MAX_B2C_RT_MS_THRESHOLD=60
+  AVG_S2C_RT_MS_THRESHOLD=1.5
+  AVG_B2C_RT_MS_THRESHOLD=1.5
+
+  # 从 CSV 文件中获取某个指标的值
   get_csv_value() {
       local file=$1
       local metric=$2
       local column=$3
       awk -F',' -v metric="$metric" -v column="$column" '
-      BEGIN {result = ""}
-      $1 == metric {result = $column}
+      BEGIN {result = ""} 
+      $1 == metric {result = $column} 
       END {print result}
       ' "$file"
   }
 
+  # 获取 Consumer 相关指标
   consume_tps_min=$(get_csv_value "$consumer_benchmark" "Consume TPS" 2)
+  max_s2c_rt=$(get_csv_value "$consumer_benchmark" "Max S2C RT" 2)
+  max_b2c_rt=$(get_csv_value "$consumer_benchmark" "Max B2C RT" 2)
+  avg_s2c_rt=$(get_csv_value "$consumer_benchmark" "Avg S2C RT" 2)
+  avg_b2c_rt=$(get_csv_value "$consumer_benchmark" "Avg B2C RT" 2)
 
+  # 获取 Producer 相关指标
   send_tps_min=$(get_csv_value "$producer_benchmark" "Send TPS" 2)
+  max_rt=$(get_csv_value "$producer_benchmark" "Max RT" 2)
+  avg_rt=$(get_csv_value "$producer_benchmark" "Avg RT" 2)
 
+  # 校验 Consumer 阈值
   consumer_tps_pass=false
-  producer_tps_pass=false
+  consumer_latency_pass=false
 
-  if [ "$consume_tps_min" -ge "$MIN_CONSUME_TPS_THRESHOLD" ]; then
+  if (( $(echo "$consume_tps_min >= $MIN_CONSUME_TPS_THRESHOLD" | bc -l) )); then
       consumer_tps_pass=true
   fi
 
-  if [ "$send_tps_min" -ge "$MIN_SEND_TPS_THRESHOLD" ]; then
+  if (( $(echo "$max_s2c_rt <= $MAX_S2C_RT_MS_THRESHOLD" | bc -l) )) && \
+    (( $(echo "$max_b2c_rt <= $MAX_B2C_RT_MS_THRESHOLD" | bc -l) )) && \
+    (( $(echo "$avg_s2c_rt <= $AVG_S2C_RT_MS_THRESHOLD" | bc -l) )) && \
+    (( $(echo "$avg_b2c_rt <= $AVG_B2C_RT_MS_THRESHOLD" | bc -l) )); then
+      consumer_latency_pass=true
+  fi
+
+  # 校验 Producer 阈值
+  producer_tps_pass=false
+  producer_latency_pass=false
+
+  if (( $(echo "$send_tps_min >= $MIN_SEND_TPS_THRESHOLD" | bc -l) )); then
       producer_tps_pass=true
   fi
 
+  if (( $(echo "$max_rt <= $MAX_RT_MS_THRESHOLD" | bc -l) )) && \
+    (( $(echo "$avg_rt <= $AVG_RT_MS_THRESHOLD" | bc -l) )); then
+      producer_latency_pass=true
+  fi
 
-  if [ "$consumer_tps_pass" = true ] && [ "$producer_tps_pass" = true ]; then
+  # 判断测试结果是否通过
+  if [ "$consumer_tps_pass" = true ] && [ "$consumer_latency_pass" = true ] && \
+    [ "$producer_tps_pass" = true ] && [ "$producer_latency_pass" = true ]; then
       echo "All benchmarks passed."
       exit 0
   else
       echo "One or more benchmarks failed."
+      if [ "$consumer_tps_pass" = false ]; then
+          echo "Consumer TPS test failed."
+      fi
+      if [ "$consumer_latency_pass" = false ]; then
+          echo "Consumer latency test failed."
+      fi
+      if [ "$producer_tps_pass" = false ]; then
+          echo "Producer TPS test failed."
+      fi
+      if [ "$producer_latency_pass" = false ]; then
+          echo "Producer latency test failed."
+      fi
       exit 1
   fi
 
   cd -
+
 fi
 
 if [ "${ACTION}" = "clean" ]; then
