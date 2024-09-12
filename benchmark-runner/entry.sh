@@ -223,7 +223,7 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   cd ${report_path}
   cp /benchmark/log_analysis.py ./log_analysis.py
   python3 log_analysis.py
-  rm -f log_analysis.py && rm -f consumer_performance_data.csv && rm -f producer_performance_data.csv
+  rm -f log_analysis.py consumer_performance_data.csv producer_performance_data.csv
   ls
 
   # 判断 CI 是否通过
@@ -233,7 +233,7 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   # 打印测试结果
   echo "====================benchmark result===================="
   echo "Consumer benchmark result: "
-  if [[ -f ${consumer_benchmark} ]]; then
+  if [ -f ${consumer_benchmark} ]; then
       cat ${consumer_benchmark}
   else
       echo "Consumer benchmark file not found."
@@ -241,7 +241,7 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
 
   echo "===================================="
   echo "Producer benchmark result: "
-  if [[ -f ${producer_benchmark} ]]; then
+  if [ -f ${producer_benchmark} ]; then
       cat ${producer_benchmark}
   else
       echo "Producer benchmark file not found."
