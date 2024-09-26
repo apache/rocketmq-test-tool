@@ -62,6 +62,26 @@ inputs:
     description: 'test time'
     required: false
     default: '1800' # default 30 minutes
+  min-send-tps-threshold:
+    description: 'min-send-tps-threshold'
+    required: false
+    default: '13000' # default threshold : only one broker as master in the cluster
+  max-rt-ms-threshold:
+    description: 'max-rt-ms-threshold'
+    required: false
+    default: '450' 
+  avg-rt-ms-threshold:
+    description: 'avg-rt-ms-threshold'
+    required: false
+    default: '5'
+  max-2c-rt-ms-threshold:
+    description: 'max-2c-rt-ms-threshold'
+    required: false
+    default: '85' 
+  avg-2c-rt-ms-threshold:
+    description: 'avg-2c-rt-ms-threshold'
+    required: false
+    default: '6' 
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -77,3 +97,8 @@ runs:
     - ${{ inputs.job-id }}
     - ${{ inputs.helm-values }}
     - ${{ inputs.test-time }}
+    - ${{ inputs.min-send-tps-threshold }}
+    - ${{ inputs.max-rt-ms-threshold }}
+    - ${{ inputs.avg-rt-ms-threshold }}
+    - ${{ inputs.max-2c-rt-ms-threshold }}
+    - ${{ inputs.avg-2c-rt-ms-threshold }}

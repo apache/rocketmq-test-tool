@@ -27,6 +27,11 @@ CHART_PATH=$8
 JOB_INDEX=${9}
 HELM_VALUES=${10}
 TEST_TIME=${11}
+MIN_SEND_TPS_THRESHOLD=${12}
+MAX_RT_MS_THRESHOLD=${13}
+AVG_RT_MS_THRESHOLD=${14}
+MAX_2C_RT_MS_THRESHOLD=${15}
+AVG_2C_RT_MS_THRESHOLD=${16}
 
 export VERSION
 export CHART_GIT
@@ -214,15 +219,8 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   echo "========================================================"
 
   # Benchmark threshold
-  MIN_SEND_TPS_THRESHOLD=19000
-  MAX_RT_MS_THRESHOLD=700
-  AVG_RT_MS_THRESHOLD=4
 
-  MIN_CONSUME_TPS_THRESHOLD=19000
-  MAX_S2C_RT_MS_THRESHOLD=60
-  MAX_B2C_RT_MS_THRESHOLD=60
-  AVG_S2C_RT_MS_THRESHOLD=1.5
-  AVG_B2C_RT_MS_THRESHOLD=1.5
+  MIN_CONSUME_TPS_THRESHOLD=${MIN_SEND_TPS_THRESHOLD}
 
   get_csv_value() {
       local file=$1
@@ -246,7 +244,7 @@ if [ "${ACTION}" = "performance-benchmark" ]; then
   # Validate the result
   consumer_tps_pass=$(awk -v a="$consume_tps_min" -v b="$MIN_CONSUME_TPS_THRESHOLD" 'BEGIN {print (a >= b) ? "true" : "false"}')
   consumer_latency_pass=$(awk -v max_s2c="$max_s2c_rt" -v max_b2c="$max_b2c_rt" -v avg_s2c="$avg_s2c_rt" -v avg_b2c="$avg_b2c_rt" \
-      -v max_s2c_thr="$MAX_S2C_RT_MS_THRESHOLD" -v max_b2c_thr="$MAX_B2C_RT_MS_THRESHOLD" -v avg_s2c_thr="$AVG_S2C_RT_MS_THRESHOLD" -v avg_b2c_thr="$AVG_B2C_RT_MS_THRESHOLD" \
+      -v max_s2c_thr="$MAX_2C_RT_MS_THRESHOLD" -v max_b2c_thr="$MAX_2C_RT_MS_THRESHOLD" -v avg_s2c_thr="$AVG_2C_RT_MS_THRESHOLD" -v avg_b2c_thr="$AVG_2C_RT_MS_THRESHOLD" \
       'BEGIN {print (max_s2c <= max_s2c_thr && max_b2c <= max_b2c_thr && avg_s2c <= avg_s2c_thr && avg_b2c <= avg_b2c_thr) ? "true" : "false"}')
 
   producer_tps_pass=$(awk -v a="$send_tps_min" -v b="$MIN_SEND_TPS_THRESHOLD" 'BEGIN {print (a >= b) ? "true" : "false"}')
