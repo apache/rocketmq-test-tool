@@ -43,7 +43,7 @@ export RUN_ID=${GITHUB_RUN_ID}
 export YAML_VALUES=`echo "${HELM_VALUES}" | sed -s 's/^/          /g'`
 
 mkdir -p ${HOME}/.kube
-kube_config=$(echo "${ASK_CONFIG}")
+kube_config=$(echo "${ASK_CONFIG}" | base64 -d)
 echo "${kube_config}" > ${HOME}/.kube/config
 export KUBECONFIG="${HOME}/.kube/config"
 
