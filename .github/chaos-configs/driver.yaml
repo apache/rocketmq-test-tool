@@ -1,0 +1,31 @@
+name: RocketMQ
+driverClass: io.openchaos.driver.rocketmq.RocketMQDriver
+
+endToEndLatencyCheck: true
+
+# RocketMQ cluster configuration
+
+# Nodes for broker
+nodes:
+  - ${node_1}
+  - ${node_2}
+
+# Nodes for nameserver
+metaNodes:
+  - ${meta_node_1}
+
+# RocketMQ configuration
+rocketmqVersion: 5.2.0
+installDir: /home/rocketmq/rocketmq-5.2.0 # you could set existent location for RocketMQ
+nameServerPort: 9876
+
+# RocketMQ client configuration
+clusterName: DefaultCluster # same value as the config in broker.properties
+vipChannelEnabled: false
+
+# RocketMQ broker configuration
+brokerClusterName: DefaultCluster
+brokerName: rocketmq-broker-0
+storePathRootDir: /home/rocketmq/store
+storePathCommitLog: /home/rocketmq/store/commitlog
+enableDLegerCommitLog: false

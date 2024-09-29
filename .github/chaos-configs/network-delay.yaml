@@ -1,0 +1,17 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay
+spec:
+  action: delay
+  mode: fixed
+  value: "2"
+  selector:
+    namespaces:
+      - ${ns}
+    labelSelectors:
+      "app.kubernetes.io/name": "broker"
+      "app.kubernetes.io/instance": ${app}
+  delay:
+    latency: "100ms"
+  duration: "30s"
